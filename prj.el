@@ -1,0 +1,16 @@
+(jde-project-file-version "1.0")
+(jde-set-variables
+ '(jde-project-name "pseudolines")
+ '(jde-global-classpath (quote ("./lib/cdep/jars")))
+ '(jde-import-auto-sort t)
+ '(jde-import-auto-sort-function (quote jde-import-organize))
+ '(jde-import-sorted-groups (quote asc))
+ '(jde-import-group-of-rules (quote (
+   ("^de\\.tum\\.ma\\.gagern\\.pseudolines\\." . "E. current modules")
+   ("^de\\.tum\\.ma\\.gagern\\." . "D. related modules")
+   ("^\\(javax?\\|org\\.w3c\\.dom\\|org\\.xml\\.sax\\)\\." . "A. java")
+   ("gagern" . "C. my own software")
+   ("\\." . "B. other")
+  )))
+)
+(setq indent-tabs-mode nil)
