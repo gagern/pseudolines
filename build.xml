@@ -347,6 +347,7 @@
   <target name="init.paths" depends="deps.quick.get">
     <path id="path.ant">
       <fileset dir="lib">
+        <include name="adhoc/**/*.jar"/>
         <include name="ant/jars/**/*.jar"/>
         <include name="ant/bundles/**/*.jar"/>
       </fileset>
@@ -363,6 +364,7 @@
     </path>
     <path id="path.compile">
       <fileset dir="lib">
+        <include name="adhoc/**/*.jar"/>
         <include name="cdep/jars/**/*.jar"/>
         <include name="cdep/bundles/**/*.jar"/>
       </fileset>
@@ -370,6 +372,7 @@
     <path id="path.optrun">
       <pathelement location="${dir.target}/classes"/>
       <fileset dir="lib">
+        <include name="adhoc/**/*.jar"/>
         <include name="optrun/jars/**/*.jar"/>
         <include name="optrun/bundles/**/*.jar"/>
       </fileset>
@@ -377,6 +380,7 @@
     <path id="path.tests.compile">
       <pathelement location="${dir.target}/classes"/>
       <fileset dir="lib">
+        <include name="adhoc/**/*.jar"/>
         <include name="test/jars/**/*.jar"/>
         <include name="test/bundles/**/*.jar"/>
         <include name="cdep/jars/**/*.jar"/>
@@ -387,6 +391,7 @@
       <pathelement location="${dir.target}/test/classes"/>
       <pathelement location="${dir.target}/classes"/>
       <fileset dir="lib">
+        <include name="adhoc/**/*.jar"/>
         <include name="test/jars/**/*.jar"/>
         <include name="test/bundles/**/*.jar"/>
         <include name="optrun/jars/**/*.jar"/>

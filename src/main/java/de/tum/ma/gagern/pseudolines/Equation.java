@@ -8,6 +8,8 @@ class Equation {
 
     Variable[] vars;
 
+    Variable diagonalVar;
+
     int len;
 
     double rhs;
@@ -28,17 +30,20 @@ class Equation {
                 return;
             }
         }
-        if (vars.length == len) {
-            double[] nc = new double[2*len];
-            Variable[] nv = new Variable[2*len];
-            System.arraycopy(coeffs, 0, nc, 0, len);
-            System.arraycopy(vars, 0, nv, 0, len);
-            coeffs = nc;
-            vars = nv;
-        }
+        if (vars.length == len)
+            setCapacity(2*len);
         coeffs[len] = coeff;
         vars[len] = var;
         ++len;
+    }
+
+    private void setCapacity(int capacity) {
+        double[] nc = new double[capacity];
+        Variable[] nv = new Variable[capacity];
+        System.arraycopy(coeffs, 0, nc, 0, len);
+        System.arraycopy(vars, 0, nv, 0, len);
+        coeffs = nc;
+        vars = nv;
     }
 
     public void addToRHS(double val) {
@@ -63,6 +68,15 @@ class Equation {
 
     double rhs() {
         return rhs;
+    }
+
+    Variable getDiagonalVar() {
+        return vars[0];
+    }
+
+    void compact() {
+        if (len != vars.length)
+            setCapacity(len);
     }
 
 }
