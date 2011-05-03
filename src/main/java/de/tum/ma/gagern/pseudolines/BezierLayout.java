@@ -3,29 +3,41 @@ package de.tum.ma.gagern.pseudolines;
 abstract class BezierLayout extends Layout {
 
     LinVec2 control(PointOnLine from, PointOnLine to) {
-        if (from instanceof Intersection)
-            return control((Intersection)from, to);
-        if (from instanceof RimPoint)
-            return control((RimPoint)from, to);
-        return from.getLocation();
+        return direction(from, to).add(from.getLocation());
     }
 
-    abstract LinVec2 control(Intersection from, PointOnLine to);
+    LinVec2 direction(PointOnLine from, PointOnLine to) {
+        if (from instanceof Intersection)
+            return direction((Intersection)from, to);
+        if (from instanceof RimPoint)
+            return direction((RimPoint)from, to);
+        return new LinVec2(LinComb.constant(0), LinComb.constant(0));
+    }
 
-    LinVec2 control(RimPoint from, PointOnLine to) {
-        if (to instanceof RimPoint) {
-            // avoid infinite recursion
-            return new LinVec2(LinComb.constant(from.x/2),
-                               LinComb.constant(from.y/2));
+    abstract LinVec2 direction(Intersection from, PointOnLine to);
+
+    abstract LinVec2 direction(RimPoint from, PointOnLine to);
+
+    PseudoLinePath getPath(PseudoLine pl) {
+        PseudoLinePath pth = new PseudoLinePath(arrangement.n);
+        PointOnLine prev = null, cur = pl.start;
+        while (cur != null) {
+            PointOnLine next = cur.opposite(prev);
+            LinVec2 loc = cur.getLocation();
+            double x = loc.getXTerm().getValue();
+            double y = loc.getYTerm().getValue();
+            LinVec2 dir;
+            if (next != null)
+                dir = direction(cur, next);
+            else
+                dir = direction(cur, prev).scale(-1);
+            double dx = dir.getXTerm().getValue();
+            double dy = dir.getYTerm().getValue();
+            pth.addSymmetric(x, y, dx, dy);
+            prev = cur;
+            cur = next;
         }
-        LinVec2 cp = control(to, from);
-        LinComb len = cp.getXTerm().mul(from.x);
-        len = len.add(cp.getYTerm().mul(from.y));
-        // Now len is the scalar product, i.e. the length of the next
-        // control point, projected onto the spoke. We want the center
-        // between that projection and the rim.
-        len = len.add(LinComb.constant(1)).div(2);
-        return new LinVec2(len.mul(from.x), len.mul(from.y));
+        return pth;
     }
 
 }

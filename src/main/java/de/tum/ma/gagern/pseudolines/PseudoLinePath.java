@@ -42,8 +42,7 @@ class PseudoLinePath implements Shape {
     }
 
     void addSymmetric(double x, double y, double dx, double dy) {
-        double len = Math.hypot(dx, dy);
-        addPoint(x, y, dx/len, dy/len, -len, len);
+        addPoint(x, y, dx, dy, 1., 1.);
     }
 
     // Implementation of Shape
@@ -129,8 +128,8 @@ class PseudoLinePath implements Shape {
                 double l2 = coords[pos + LEN_IN];
                 c[0] = px1 + dx1*l1;
                 c[1] = py1 + dy1*l1;
-                c[2] = px2 + dx2*l2;
-                c[3] = py2 + dy2*l2;
+                c[2] = px2 - dx2*l2;
+                c[3] = py2 - dy2*l2;
                 c[4] = px2;
                 c[5] = py2;
                 return SEG_CUBICTO;

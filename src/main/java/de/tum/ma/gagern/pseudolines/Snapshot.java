@@ -3,6 +3,7 @@ package de.tum.ma.gagern.pseudolines;
 import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.geom.Ellipse2D;
+import java.util.ArrayList;
 import java.util.List;
 
 class Snapshot {
@@ -10,9 +11,13 @@ class Snapshot {
     private static final Shape UNIT_CIRCLE =
         new Ellipse2D.Double(-1, -1, 2, 2);
 
-    PseudoLine circleLine = new PseudoLine();
+    PseudoLine circleLine;
 
-    List<PseudoLinePath> paths = java.util.Collections.emptyList();
+    List<PseudoLinePath> paths;
+
+    Snapshot(Arrangement arr) {
+        paths = new ArrayList<PseudoLinePath>(arr.n);
+    }
 
     public void render(Graphics2D g2d) {
         for (PseudoLinePath p: paths) {

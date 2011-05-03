@@ -85,6 +85,13 @@ abstract class LinComb {
             return c;
         }
 
+        public LinComb add(LinComb that) {
+            if (c == 0.)
+                return that;
+            else
+                return super.add(that);
+        }
+
     }
 
 }

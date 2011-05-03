@@ -17,13 +17,19 @@ public class PseudoLineView extends JComponent {
 
     private static final double THICK_WIDTH = 5.;
 
-    private Snapshot snapshot = new Snapshot();
+    private Arrangement arr;
+
+    private Snapshot snapshot;
 
     private Stroke thinStroke;
 
     private Stroke thickStroke;
 
-    public PseudoLineView() {
+    public PseudoLineView() throws LinearSystemException {
+        Chirotope chi = Catalog.getCatalog().get(0).getChirotope();
+        arr = new Arrangement(chi, 0);
+        Layout layout = new RegularBezierLayout();
+        snapshot = arr.snapshot(layout);
     }
 
     public void paintComponent(Graphics g) {

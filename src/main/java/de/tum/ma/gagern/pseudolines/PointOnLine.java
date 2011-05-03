@@ -2,7 +2,8 @@ package de.tum.ma.gagern.pseudolines;
 
 abstract class PointOnLine {
 
-    private PointOnLine[] neighbours;
+    // private
+    PointOnLine[] neighbours;
 
     PointOnLine(int numPseudolines) {
         neighbours = new PointOnLine[numPseudolines*2];
@@ -14,7 +15,7 @@ abstract class PointOnLine {
         for (int i = 0; i < neighbours.length; ++i)
             if (neighbours[i] == pt)
                 return i;
-        throw notANeighbour();
+        throw new IllegalArgumentException("Argument is not a neighbour");
     }
 
     int numNeighbours() {
@@ -25,6 +26,15 @@ abstract class PointOnLine {
         return neighbours[index];
     }
 
+    PointOnLine relativeNeighbour(PointOnLine reference, int offset) {
+        int idx = neighbourIndex(reference) + offset + neighbours.length;
+        return neighbours[idx%neighbours.length];
+    }
+
+    PointOnLine opposite(PointOnLine incoming) {
+        return relativeNeighbour(incoming, neighbours.length/2);
+    }
+
     void addCrossing(PointOnLine prev, PseudoLine line, PointOnLine next) {
         if (prev == null)
             throw new NullPointerException("prev must not be null");
@@ -32,11 +42,7 @@ abstract class PointOnLine {
         assert idx < neighbours.length/2;
         assert neighbours[idx + neighbours.length/2] == null;
         neighbours[idx] = prev;
-        neighbours[idx + neighbours.length] = next;
-    }
-
-    static IllegalArgumentException notANeighbour() {
-        return new IllegalArgumentException("Argument is not a neighbour");
+        neighbours[idx + neighbours.length/2] = next;
     }
 
 }

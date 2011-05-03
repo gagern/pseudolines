@@ -4,11 +4,11 @@ import javax.swing.JFrame;
 
 public class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws LinearSystemException {
         new Main(args);
     }
 
-    public Main(String... args) {
+    public Main(String... args) throws LinearSystemException {
         JFrame frm = new JFrame("Pseudolines");
         frm.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frm.setSize(600, 600);
