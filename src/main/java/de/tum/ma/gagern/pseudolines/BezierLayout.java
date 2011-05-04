@@ -40,4 +40,22 @@ abstract class BezierLayout extends Layout {
         return pth;
     }
 
+    PseudoLinePath getEdge(PointOnLine from, PointOnLine to) {
+        PseudoLinePath pth = new PseudoLinePath(2);
+        LinVec2 loc, dir;
+        loc = from.getLocation();
+        dir = direction(from, to);
+        pth.addSymmetric(loc.getXTerm().getValue(),
+                         loc.getYTerm().getValue(),
+                         dir.getXTerm().getValue(),
+                         dir.getYTerm().getValue());
+        loc = to.getLocation();
+        dir = direction(to, from);
+        pth.addSymmetric(loc.getXTerm().getValue(),
+                         loc.getYTerm().getValue(),
+                         -dir.getXTerm().getValue(),
+                         -dir.getYTerm().getValue());
+        return pth;
+    }
+
 }

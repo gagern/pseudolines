@@ -1,5 +1,7 @@
 package de.tum.ma.gagern.pseudolines;
 
+import java.awt.geom.Point2D;
+
 class RegularBezierLayout extends BezierLayout {
 
     LinVec2 direction(Intersection from, PointOnLine to) {
@@ -24,8 +26,13 @@ class RegularBezierLayout extends BezierLayout {
         double y =  c*from.x -s*from.y;
         if (to instanceof RimPoint) {
             // avoid infinite recursion, as we otherwise call control
-            return new LinVec2(LinComb.constant(x/2.),
-                               LinComb.constant(y/2.));
+            Point2D dir;
+            if (from.hasNeighbour(to))
+                dir = rimDirection(from, (RimPoint)to);
+            else
+                dir = new Point2D.Double(x/2., y/2.);
+            return new LinVec2(LinComb.constant(dir.getX()),
+                               LinComb.constant(dir.getY()));
         }
         LinVec2 cp = control(to, from).sub(from.getLocation());
         LinComb len = cp.getXTerm().mul(x);

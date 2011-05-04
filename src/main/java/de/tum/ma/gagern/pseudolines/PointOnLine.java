@@ -2,8 +2,9 @@ package de.tum.ma.gagern.pseudolines;
 
 abstract class PointOnLine {
 
-    // private
-    PointOnLine[] neighbours;
+    int id;
+
+    private PointOnLine[] neighbours;
 
     PointOnLine(int numPseudolines) {
         neighbours = new PointOnLine[numPseudolines*2];
@@ -24,6 +25,13 @@ abstract class PointOnLine {
 
     PointOnLine neighbour(int index) {
         return neighbours[index];
+    }
+
+    boolean hasNeighbour(PointOnLine pt) {
+        for (int i = 0; i < neighbours.length; ++i)
+            if (neighbours[i] == pt)
+                return true;
+        return false;
     }
 
     PointOnLine relativeNeighbour(PointOnLine reference, int offset) {

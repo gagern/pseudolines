@@ -5,7 +5,7 @@
   <info organisation="de.tum.ma.gagern" module="pseudolines">
     <license name="GNU General Public License Version 3"
              url="http://www.gnu.org/licenses/gpl-3.0.html"/>
-    <description homepage="http://martin.von_gagern.net/projects/pseudolines">Short (single-line) description of project</description>
+    <description homepage="http://martin.von_gagern.net/projects/pseudolines">Display pyseudoline arrangements</description>
     <doclink:package-list>
       <!-- Placeholder element, to be filled out during delivery -->
     </doclink:package-list>
@@ -68,7 +68,7 @@
                         test    -> compile,runtime,master">
     <dependency org="net.von-gagern.martin"
                 name="jse-api"
-                rev="1.5.+"
+                rev="6.+"
                 conf="boot"/>
     <dependency org="junit" name="junit" rev="4.+" conf="test"/>
     <dependency org="org.apache.ant"

@@ -8,12 +8,12 @@
 
   <pd:info>
     <pd:name>pseudolines</pd:name>
-    <pd:description>Short (single-line) description of project</pd:description>
+    <pd:description>Display pyseudoline arrangements</pd:description>
     <pd:homepage>http://martin.von_gagern.net/projects/pseudolines</pd:homepage>
   </pd:info>
 
   <pd:license key="gpl" version="3.0" later="yes"/>
-  <pd:api version="1.5"/>
+  <pd:api version="6"/>
 
   <pd:ui>
     <pd:cli class="de.tum.ma.gagern.pseudolines.Main"/>

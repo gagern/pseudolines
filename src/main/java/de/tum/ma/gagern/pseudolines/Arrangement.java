@@ -10,11 +10,16 @@ class Arrangement {
 
     List<PseudoLine> pls;
 
+    private int nextPolID;
+
     List<PointOnLine> pols;
+
+    List<Cell> triangles;
 
     Arrangement(Chirotope chi, int circleLine) {
         n = chi.numElements();
-        this.pols = new ArrayList<PointOnLine>(n*n);
+        pols = new ArrayList<PointOnLine>(n*n);
+        triangles = new ArrayList<Cell>(2*n);
         LineSequenceElement[][] lseq =
             LineSequenceElement.getLineSequence(chi, circleLine);
         int[] relabel = new int[n], reorient = new int[n];
@@ -34,20 +39,20 @@ class Arrangement {
             pls[i] = new PseudoLine();
         }
         Intersection[] intersections = new Intersection[n*(n-1)/2];
-        PointOnLine[] pols = new PointOnLine[n];
+        PointOnLine[] ptsOnCurLine = new PointOnLine[n];
         for (int i = 1; i < n; ++i) {
             PseudoLine plsi = pls[i];
             double angle = Math.PI*(i - 1)/(n - 1);
             double x = Math.cos(angle), y = Math.sin(angle);
             RimPoint start = new RimPoint(x, y);
             RimPoint end = new RimPoint(-x, -y);
-            this.pols.add(start);
-            this.pols.add(end);
+            addPOL(start);
+            addPOL(end);
             pls[i].setEndPoints(start, end);
             lseq = LineSequenceElement.getLineSequence(chi, i);
             assert lseq[0].length == 1 && lseq[0][0].line == 0;
-            pols[0] = start;
-            pols[lseq.length] = end;
+            ptsOnCurLine[0] = start;
+            ptsOnCurLine[lseq.length] = end;
             for (int j = 1; j < lseq.length; ++j) {
                 int min = i, max = i;
                 assert lseq[j].length > 0;
@@ -63,15 +68,18 @@ class Arrangement {
                 if (intersections[index] == null) {
                     intersections[index] = intersection =
                         new Intersection(lseq[j].length + 1);
-                    this.pols.add(intersection);
+                    addPOL(intersection);
                 }
-                pols[j] = intersection;
+                ptsOnCurLine[j] = intersection;
             }
             for (int j = 1; j < lseq.length; ++j) {
-                pols[j].addCrossing(pols[j - 1], plsi, pols[j + 1]);
+                ptsOnCurLine[j].addCrossing
+                    (ptsOnCurLine[j - 1], plsi, ptsOnCurLine[j + 1]);
             }
-            pols[0].addCrossing(pols[1], plsi, null);
-            pols[lseq.length].addCrossing(pols[lseq.length - 1], plsi, null);
+            ptsOnCurLine[0].addCrossing
+                (ptsOnCurLine[1], plsi, null);
+            ptsOnCurLine[lseq.length].addCrossing
+                (ptsOnCurLine[lseq.length - 1], plsi, null);
         }
         PseudoLine prevLine = pls[(2*n - 2)%n], curLine = pls[n - 1];
         EndPoint prevStart = prevLine.end, prevEnd = prevLine.start;
@@ -87,6 +95,28 @@ class Arrangement {
             curEnd = nextEnd;
         }
         this.pls = new ArrayList<PseudoLine>(Arrays.asList(pls));
+        findTriangles();
+    }
+
+    void addPOL(PointOnLine pol) {
+        pol.id = nextPolID++;
+        pols.add(pol);
+    }
+
+    void findTriangles() {
+        triangles.clear();
+        for (PointOnLine a: pols) {
+            int na = a.numNeighbours();
+            PointOnLine b = a.neighbour(na - 1);
+            for (int i = 0; i < na; ++i) {
+                PointOnLine c = a.neighbour(i);
+                if (b != null && c != null && a.id < b.id && a.id < c.id
+                    && b.hasNeighbour(c)) {
+                    triangles.add(new Cell(a, b, c));
+                }
+                b = c;
+            }
+        }
     }
 
     Snapshot snapshot(Layout layout) throws LinearSystemException {
@@ -99,6 +129,10 @@ class Arrangement {
             PseudoLinePath pth = layout.getPath(pl);
             pth.pseudoLine = pl;
             snapshot.paths.add(pth);
+        }
+        for (Cell triangle: triangles) {
+            CellShape cs = layout.getShape(triangle);
+            snapshot.triangles.add(cs);
         }
         return snapshot;
     }
