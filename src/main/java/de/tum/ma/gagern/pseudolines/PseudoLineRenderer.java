@@ -19,24 +19,11 @@
 package de.tum.ma.gagern.pseudolines;
 
 import java.awt.Shape;
-import java.util.Arrays;
-import java.util.List;
 
-class Cell {
+interface PseudoLineRenderer {
 
-    List<PointOnLine> corners;
+    public void renderLine(PseudoLine pl, Shape shape);
 
-    Shape shape;
-
-    Cell(PointOnLine... corners) {
-        this.corners = Arrays.asList(corners);
-    }
-
-    boolean isAtRim() {
-        for (PointOnLine corner: corners)
-            if (corner instanceof RimPoint)
-                return true;
-        return false;
-    }
+    public void renderCell(Cell cell, Shape shape);
 
 }

@@ -19,9 +19,11 @@
 package de.tum.ma.gagern.pseudolines;
 
 import java.awt.BasicStroke;
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
+import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -31,7 +33,10 @@ import java.awt.geom.Point2D;
 import javax.swing.JComponent;
 import javax.swing.event.MouseInputAdapter;
 
-public class PseudoLineView extends JComponent {
+public class PseudoLineView
+    extends JComponent
+    implements PseudoLineRenderer
+{
 
     private static final int RIM_SIZE = 20;
 
@@ -48,6 +53,12 @@ public class PseudoLineView extends JComponent {
     private Layout layout;
 
     private Snapshot snapshot;
+
+    private Color triangleColor;
+
+    private boolean fillRimCells;
+
+    private Graphics2D g2d;
 
     private Stroke thinStroke;
 
@@ -66,6 +77,7 @@ public class PseudoLineView extends JComponent {
         Mouser mouser = new Mouser();
         addMouseListener(mouser);
         addMouseMotionListener(mouser);
+        triangleColor = new Color(0xffaa00);
     }
 
     AffineTransform unitCircleTransform() {
@@ -89,7 +101,7 @@ public class PseudoLineView extends JComponent {
         int w = getWidth(), h = getHeight();
         if (w < MIN_TOTAL_SIZE || h < MIN_TOTAL_SIZE)
             return;
-        Graphics2D g2d = (Graphics2D)g.create();
+        g2d = (Graphics2D)g.create();
         g2d.translate(w/2., h/2.);
         double scale = (Math.min(w, h) - 2*RIM_SIZE)/2.;
         g2d.scale(scale, -scale);
@@ -106,8 +118,22 @@ public class PseudoLineView extends JComponent {
                              RenderingHints.VALUE_DITHER_DISABLE);
         g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL,
                              RenderingHints.VALUE_STROKE_PURE);
-        snapshot.render(g2d);
+        snapshot.render(this);
         g2d.dispose();
+        g2d.dispose();
+    }
+
+    public void renderLine(PseudoLine pl, Shape shape) {
+        g2d.setColor(pl.color);
+        g2d.draw(shape);
+    }
+
+    public void renderCell(Cell cell, Shape shape) {
+        if (cell.corners.size() == 3 &&
+            (fillRimCells || !cell.isAtRim())) {
+            g2d.setColor(triangleColor);
+            g2d.fill(shape);
+        }
     }
 
     void flip(CellShape triangle) {
