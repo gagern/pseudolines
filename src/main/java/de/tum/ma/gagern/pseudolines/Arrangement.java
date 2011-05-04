@@ -155,4 +155,25 @@ class Arrangement {
         return snapshot;
     }
 
+    void flip(Cell triangle) {
+        if (triangle.corners.size() != 3)
+            throw new IllegalArgumentException("Not a triangle, cannot flip");
+        for (PointOnLine corner: triangle.corners) {
+            if (corner instanceof Intersection == false) {
+                return; // cannot flip that yet, simply ignore it
+            }
+        }
+        PointOnLine a = triangle.corners.get(0);
+        PointOnLine b = triangle.corners.get(1);
+        PointOnLine c = triangle.corners.get(2);
+        PointOnLine.swap(a, b);
+        PointOnLine.swap(b, c);
+        PointOnLine.swap(a, c);
+        /* We might one day choose to update only affected triangles.
+        triangle.shape = null;
+        Collections.swap(triangle.corners, 1, 2);
+        */
+        findTriangles();
+    }
+
 }

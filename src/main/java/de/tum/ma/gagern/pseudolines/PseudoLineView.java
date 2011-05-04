@@ -23,7 +23,13 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Stroke;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.MouseEvent;
+import java.awt.geom.AffineTransform;
+import java.awt.geom.Point2D;
 import javax.swing.JComponent;
+import javax.swing.event.MouseInputAdapter;
 
 public class PseudoLineView extends JComponent {
 
@@ -35,7 +41,11 @@ public class PseudoLineView extends JComponent {
 
     private static final double THICK_WIDTH = 5.;
 
+    private AffineTransform unitCircleTransform;
+
     private Arrangement arr;
+
+    private Layout layout;
 
     private Snapshot snapshot;
 
@@ -46,8 +56,32 @@ public class PseudoLineView extends JComponent {
     public PseudoLineView() throws LinearSystemException {
         Chirotope chi = Catalog.getCatalog().get(0).getChirotope();
         arr = new Arrangement(chi, 0);
-        Layout layout = new RegularBezierLayout();
+        layout = new RegularBezierLayout();
         snapshot = arr.snapshot(layout);
+        addComponentListener(new ComponentAdapter() {
+                @Override public void componentResized(ComponentEvent evnt) {
+                    unitCircleTransform = null;
+                }
+            });
+        Mouser mouser = new Mouser();
+        addMouseListener(mouser);
+        addMouseMotionListener(mouser);
+    }
+
+    AffineTransform unitCircleTransform() {
+        if (unitCircleTransform != null)
+            return unitCircleTransform;
+        AffineTransform at = new AffineTransform();
+        int w = getWidth(), h = getHeight();
+        double scale = 2./(Math.min(w, h) - 2*RIM_SIZE);
+        at.scale(scale, -scale);
+        at.translate(-w/2., -h/2.);
+        unitCircleTransform = at;
+        return at;
+    }
+
+    Point2D toUnitCircle(Point2D in, Point2D out) {
+        return unitCircleTransform().transform(in, out);
     }
 
     public void paintComponent(Graphics g) {
@@ -58,7 +92,7 @@ public class PseudoLineView extends JComponent {
         Graphics2D g2d = (Graphics2D)g.create();
         g2d.translate(w/2., h/2.);
         double scale = (Math.min(w, h) - 2*RIM_SIZE)/2.;
-        g2d.scale(scale, scale);
+        g2d.scale(scale, -scale);
         thinStroke = new BasicStroke((float)(THIN_WIDTH/scale),
                                      BasicStroke.CAP_ROUND,
                                      BasicStroke.JOIN_MITER);
@@ -74,6 +108,34 @@ public class PseudoLineView extends JComponent {
                              RenderingHints.VALUE_STROKE_PURE);
         snapshot.render(g2d);
         g2d.dispose();
+    }
+
+    void flip(CellShape triangle) {
+        arr.flip(triangle.cell);
+        try {
+            snapshot = arr.snapshot(layout);
+            repaint();
+        }
+        catch (LinearSystemException e) {
+            e.printStackTrace();
+            arr.flip(triangle.cell);
+        }
+    }
+
+    private class Mouser extends MouseInputAdapter {
+
+        @Override public void mouseClicked(MouseEvent evnt) {
+            Point2D.Double pt = new Point2D.Double(evnt.getX() + .5,
+                                                   evnt.getY() + .5);
+            toUnitCircle(pt, pt);
+            for (CellShape triangle: snapshot.triangles) {
+                if (triangle.getShape().contains(pt)) {
+                    flip(triangle);
+                    return;
+                }
+            }
+        }
+
     }
 
 }

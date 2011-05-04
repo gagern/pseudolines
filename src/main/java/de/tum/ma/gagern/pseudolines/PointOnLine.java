@@ -71,4 +71,27 @@ abstract class PointOnLine {
         neighbours[idx + neighbours.length/2] = next;
     }
 
+    void replace(PointOnLine search, PointOnLine replace) {
+        neighbours[neighbourIndex(search)] = replace;
+    }
+
+    static void swap(PointOnLine b, PointOnLine c) {
+        PointOnLine[] nb = b.neighbours, nc = c.neighbours;
+        int lb = nb.length, lc = nc.length;
+        int ib = b.neighbourIndex(c), ic = c.neighbourIndex(b);
+        int jb = (ib + lb/2)%lb, jc = (ic + lc/2)%lc;
+        
+        // old: a - b - c - d
+        // new: a - c - b - d
+        PointOnLine a = nb[jb], d = nc[jc];
+        if (a == null || d == null)
+            throw new IllegalArgumentException("Cannot swap end points");
+        a.replace(b,c);
+        nc[ic] = a;
+        nc[jc] = b;
+        nb[jb] = c;
+        nb[ib] = d;
+        d.replace(c, b);
+    }
+
 }
