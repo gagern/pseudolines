@@ -56,7 +56,7 @@ public class PseudoLineView
 
     private Color triangleColor;
 
-    private boolean fillRimCells;
+    private boolean fillRimCells = true;
 
     private Graphics2D g2d;
 

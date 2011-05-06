@@ -73,7 +73,7 @@ class PseudoLine {
         int pos = 0;
 
         public boolean hasNext() {
-            return cur != end;
+            return cur != end || pos == 0;
         }
 
         public HalfEdge next() {
@@ -93,7 +93,7 @@ class PseudoLine {
         }
 
         public boolean hasPrevious() {
-            return cur != start.opposite;
+            return pos > 0;
         }
 
         public HalfEdge previous() {

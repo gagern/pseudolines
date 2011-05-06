@@ -98,12 +98,16 @@ abstract class Layout {
     }
 
     void layoutRim(PseudoLine pl) {
-        // ignore this for now.
+        for (HalfEdge he: pl.allHalfEdges()) {
+            Point2D dir = rimDirection(he.center, he.connection.center);
+            he.xCtrl = he.center.xPos + dir.getX();
+            he.yCtrl = he.center.yPos + dir.getY();
+        }
     }
 
     abstract void layoutInner(PseudoLine pl);
 
-    Point2D rimDirection(RimPoint from, RimPoint to) {
+    Point2D rimDirection(PointOnLine from, PointOnLine to) {
 	double dir = Math.signum(from.xPos*to.yPos - from.yPos*to.xPos);
         double mx = (from.xPos + to.xPos)/2., my = (from.yPos + to.yPos)/2.;
         double dx = (from.xPos - to.xPos)/2., dy = (from.yPos - to.yPos)/2.;

@@ -131,6 +131,9 @@ class Arrangement {
         // another
         rimDummyStart.connection.connect(rimEndOut);
         rimDummyEnd.connection.connect(rimStartOut);
+        HalfEdge rimEnd = rimEndOut.connection;
+        HalfEdge rimStart = rimEnd.opposite;
+        rimLine.setEnds(rimStart, rimEnd);
 
         // Done constructing the point graph, let's do other stuff
         assert assertInvariants();
