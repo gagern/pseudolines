@@ -20,6 +20,8 @@ package de.tum.ma.gagern.pseudolines;
 
 abstract class LinComb {
 
+    public static final LinComb ZERO = new Constant(0);
+
     public abstract void addToEquation(double coeff, Equation eq);
 
     public abstract double getValue();

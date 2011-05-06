@@ -22,8 +22,14 @@ import java.awt.geom.Point2D;
 
 class RegularBezierLayout extends BezierLayout {
 
+    LinVec2 dirVars(Intersection point) {
+        if (point.dir == null)
+            point.dir = new LinVec2();
+        return point.dir;
+    }
+
     LinVec2 direction(Intersection from, HalfEdge he) {
-        return from.dir.rot(he.index, from.size());
+        return dirVars(from).rot(he.index, from.size());
     }
 
     LinVec2 direction(RimPoint from, HalfEdge he) {
@@ -64,7 +70,7 @@ class RegularBezierLayout extends BezierLayout {
     void addEquations(Intersection pt) {
         int n = pt.size();
         LinVec2 eqPos = pt.pos.scale(-n);
-        LinVec2 eqDir = pt.dir.scale(-2*n);
+        LinVec2 eqDir = dirVars(pt).scale(-2*n);
         for (HalfEdge he: pt) {
             LinVec2 nc = control(he.connection);
             eqPos = eqPos.add(nc);

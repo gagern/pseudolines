@@ -29,7 +29,9 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
 import java.awt.geom.AffineTransform;
+import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
+import java.util.Collection;
 import javax.swing.JComponent;
 import javax.swing.event.MouseInputAdapter;
 
@@ -60,6 +62,8 @@ public class PseudoLineView
 
     private Graphics2D g2d;
 
+    private double scale;
+
     private Stroke thinStroke;
 
     private Stroke thickStroke;
@@ -67,7 +71,7 @@ public class PseudoLineView
     public PseudoLineView() throws LinearSystemException {
         Chirotope chi = Catalog.getCatalog().get(0).getChirotope();
         arr = new Arrangement(chi, 0);
-        layout = new RegularBezierLayout();
+        layout = new BezierLayout();
         snapshot = arr.snapshot(layout);
         addComponentListener(new ComponentAdapter() {
                 @Override public void componentResized(ComponentEvent evnt) {
@@ -103,7 +107,7 @@ public class PseudoLineView
             return;
         g2d = (Graphics2D)g.create();
         g2d.translate(w/2., h/2.);
-        double scale = (Math.min(w, h) - 2*RIM_SIZE)/2.;
+        scale = (Math.min(w, h) - 2*RIM_SIZE)/2.;
         g2d.scale(scale, -scale);
         thinStroke = new BasicStroke((float)(THIN_WIDTH/scale),
                                      BasicStroke.CAP_ROUND,
@@ -119,8 +123,24 @@ public class PseudoLineView
         g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL,
                              RenderingHints.VALUE_STROKE_PURE);
         snapshot.render(this);
+        //drawControlPoints(arr.points, Color.RED);
         g2d.dispose();
         g2d = null;
+    }
+
+    public void drawControlPoints(Collection<PointOnLine> points, Color color) {
+        g2d.setColor(color);
+        Ellipse2D circ = new Ellipse2D.Double();
+        for (PointOnLine p: points) {
+            for (HalfEdge he: p) {
+                if (he.connection == null)
+                    continue;
+                circ.setFrameFromCenter(he.xCtrl, he.yCtrl,
+                                        he.xCtrl - 1./scale,
+                                        he.yCtrl - 1./scale);
+                g2d.fill(circ);
+            }
+        }
     }
 
     public void renderLine(PseudoLine pl, Shape shape) {

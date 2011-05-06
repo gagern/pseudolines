@@ -20,9 +20,16 @@ package de.tum.ma.gagern.pseudolines;
 
 class LinVec2 {
 
+    public static final LinVec2 ZERO =
+        new LinVec2(LinComb.ZERO, LinComb.ZERO);
+
     private final LinComb x;
 
     private final LinComb y;
+
+    public LinVec2() {
+        this(new Variable(), new Variable());
+    }
 
     public LinVec2(LinComb x, LinComb y) {
         this.x = x;

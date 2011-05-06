@@ -69,16 +69,10 @@ class HalfEdge {
     PseudoLine pseudoLine;
 
     /**
-     * Variable for the x direction of the control point. Only used by
-     * some layouts, so it may be <code>null</code>.
+     * Variable vector for the direction of the control point. Only
+     * used by some layouts, so it may be <code>null</code>.
      */
-    Variable xVar;
-
-    /**
-     * Variable for the y direction of the control point. Only used by
-     * some layouts, so it may be <code>null</code>.
-     */
-    Variable yVar;
+    LinVec2 dir;
 
     /**
      * The x coordinate of the control point. This point will control

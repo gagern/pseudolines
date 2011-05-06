@@ -20,17 +20,10 @@ package de.tum.ma.gagern.pseudolines;
 
 class Intersection extends PointOnLine {
 
-    Variable xVar, yVar, xDir, yDir;
-
     LinVec2 pos, dir;
 
     Intersection() {
-        xVar = new Variable();
-        yVar = new Variable();
-        xDir = new Variable();
-        yDir = new Variable();
-        pos = new LinVec2(xVar, yVar);
-        dir = new LinVec2(xDir, yDir);
+        pos = new LinVec2();
     }
 
     LinVec2 getLocation() {
