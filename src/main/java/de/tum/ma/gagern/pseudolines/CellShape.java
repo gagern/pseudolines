@@ -32,7 +32,7 @@ class CellShape {
 
     CellShape(Cell cell) {
         this.cell = cell;
-        edges = new PseudoLinePath[cell.corners.size()];
+        edges = new PseudoLinePath[cell.size()];
     }
 
     Shape getShape() {

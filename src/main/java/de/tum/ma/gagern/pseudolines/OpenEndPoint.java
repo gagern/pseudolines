@@ -25,10 +25,6 @@ class OpenEndPoint extends EndPoint {
 
     Collection<PointOnLine> surrounding;
 
-    public OpenEndPoint() {
-        super(1);
-    }
-
     LinVec2 getLocation() {
         Iterator<PointOnLine> iter = surrounding.iterator();
         LinVec2 loc = iter.next().getLocation();

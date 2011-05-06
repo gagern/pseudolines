@@ -22,16 +22,16 @@ import java.awt.geom.Point2D;
 
 class RegularBezierLayout extends BezierLayout {
 
-    LinVec2 direction(Intersection from, PointOnLine to) {
-        return from.dir.rot(from.neighbourIndex(to), from.numNeighbours());
+    LinVec2 direction(Intersection from, HalfEdge he) {
+        return from.dir.rot(he.index, from.size());
     }
 
-    LinVec2 direction(RimPoint from, PointOnLine to) {
-        int idx = from.neighbourIndex(to);
+    LinVec2 direction(RimPoint from, HalfEdge he) {
+        PointOnLine to = he.connection.center;
         /* a is the angle of the control point direction, relative to
          * the tangent to the circle.
          */
-        double a = Math.PI*2.*(idx + 1)/from.numNeighbours();
+        double a = Math.PI*2.*he.index/from.size();
         double s = Math.sin(a), c = Math.cos(a);
         /* At the rim point, there is a local coordinate system with
          * the counterclockwise tangent unit vector (-y, x) as first
@@ -40,19 +40,16 @@ class RegularBezierLayout extends BezierLayout {
          * coordinate system that we interpret the angle above to get
          * our absolute direction vector for the control point.
          */
-        double x = -c*from.y -s*from.x;
-        double y =  c*from.x -s*from.y;
+        double x = -c*from.yPos -s*from.xPos;
+        double y =  c*from.xPos -s*from.yPos;
         if (to instanceof RimPoint) {
             // avoid infinite recursion, as we otherwise call control
             Point2D dir;
-            if (from.hasNeighbour(to))
-                dir = rimDirection(from, (RimPoint)to);
-            else
-                dir = new Point2D.Double(x/2., y/2.);
+            dir = rimDirection(from, (RimPoint)to);
             return new LinVec2(LinComb.constant(dir.getX()),
                                LinComb.constant(dir.getY()));
         }
-        LinVec2 cp = control(to, from).sub(from.getLocation());
+        LinVec2 cp = control(he.connection).sub(from.getLocation());
         LinComb len = cp.getXTerm().mul(x);
         len = len.add(cp.getYTerm().mul(y));
         /* Now len is the scalar product, i.e. the distance of the
@@ -65,13 +62,13 @@ class RegularBezierLayout extends BezierLayout {
     }
 
     void addEquations(Intersection pt) {
-        int n = pt.numNeighbours();
+        int n = pt.size();
         LinVec2 eqPos = pt.pos.scale(-n);
         LinVec2 eqDir = pt.dir.scale(-2*n);
-        for (int i = 0; i < n; ++i) {
-            LinVec2 nc = control(pt.neighbour(i), pt);
+        for (HalfEdge he: pt) {
+            LinVec2 nc = control(he.connection);
             eqPos = eqPos.add(nc);
-            eqDir = eqDir.add(nc.sub(pt.pos).rot(-i, n));
+            eqDir = eqDir.add(nc.sub(pt.pos).rot(-he.index, n));
         }
         ls.eqZero(eqPos);
         ls.eqZero(eqDir);

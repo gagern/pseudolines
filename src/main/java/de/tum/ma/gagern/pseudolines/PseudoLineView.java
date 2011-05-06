@@ -120,7 +120,7 @@ public class PseudoLineView
                              RenderingHints.VALUE_STROKE_PURE);
         snapshot.render(this);
         g2d.dispose();
-        g2d.dispose();
+        g2d = null;
     }
 
     public void renderLine(PseudoLine pl, Shape shape) {
@@ -129,7 +129,7 @@ public class PseudoLineView
     }
 
     public void renderCell(Cell cell, Shape shape) {
-        if (cell.corners.size() == 3 &&
+        if (cell.size() == 3 &&
             (fillRimCells || !cell.isAtRim())) {
             g2d.setColor(triangleColor);
             g2d.fill(shape);

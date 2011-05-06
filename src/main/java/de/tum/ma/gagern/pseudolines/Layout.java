@@ -37,19 +37,40 @@ abstract class Layout {
 
     abstract void addEquations(Intersection pt);
 
-    abstract PseudoLinePath getPath(PseudoLine pl);
+    PseudoLinePath getPath(PseudoLine pl) {
+        PseudoLinePath pth = new PseudoLinePath(arrangement.n);
+        HalfEdge out = pl.start, in;
+        do {
+            pth.addSymmetric(out.center.xPos, out.center.yPos,
+                             out.xCtrl - out.center.xPos,
+                             out.yCtrl - out.center.yPos);
+            in = out.connection;
+            out = in.opposite;
+        } while (in != pl.end);
+        pth.addSymmetric(in.center.xPos, in.center.yPos,
+                         in.center.xPos - in.xCtrl,
+                         in.center.yPos - in.yCtrl);
+        return pth;
+    }
 
-    abstract PseudoLinePath getEdge(PointOnLine from, PointOnLine to);
+    PseudoLinePath getEdge(HalfEdge edge) {
+        PseudoLinePath pth = new PseudoLinePath(2);
+        pth.addSymmetric(edge.center.xPos, edge.center.yPos,
+                         edge.xCtrl - edge.center.xPos,
+                         edge.yCtrl - edge.center.yPos);
+        edge = edge.connection;
+        pth.addSymmetric(edge.center.xPos, edge.center.yPos,
+                         edge.center.xPos - edge.xCtrl,
+                         edge.center.yPos - edge.yCtrl);
+        return pth;
+    }
 
     CellShape getShape(Cell cell) {
-        int n = cell.corners.size();
+        int n = cell.size();
         CellShape cs = new CellShape(cell);
-        PointOnLine prev = cell.corners.get(n - 1);
-        for (int i = 0; i < n; ++i) {
-            PointOnLine next = cell.corners.get(i);
-            cs.edges[i] = getEdge(prev, next);
-            prev = next;
-        }
+        int i = 0;
+        for (HalfEdge e: cell.edges())
+            cs.edges[i++] = getEdge(e);
         cell.shape = cs.getShape();
         return cs;
     }
@@ -57,28 +78,48 @@ abstract class Layout {
     void performLayout(Arrangement arr) throws LinearSystemException {
         arrangement = arr;
         ls.clear();
-        for (PointOnLine pol: arr.pols)
-            addEquations(pol);
+        for (PointOnLine point: arr.points)
+            addEquations(point);
         ls.solve();
+        for (PointOnLine point: arr.points) {
+            LinVec2 loc = point.getLocation();
+            point.xPos = loc.getXTerm().getValue();
+            point.yPos = loc.getYTerm().getValue();
+        }
+        for (PseudoLine pl: arr.lines)
+            layoutLine(pl);
     }
 
+    void layoutLine(PseudoLine pl) {
+        if (pl == arrangement.rimLine())
+            layoutRim(pl);
+        else
+            layoutInner(pl);
+    }
+
+    void layoutRim(PseudoLine pl) {
+        // ignore this for now.
+    }
+
+    abstract void layoutInner(PseudoLine pl);
+
     Point2D rimDirection(RimPoint from, RimPoint to) {
-	double dir = Math.signum(from.x*to.y - from.y*to.x);
-        double mx = (from.x + to.x)/2., my = (from.y + to.y)/2.;
-        double dx = (from.x - to.x)/2., dy = (from.y - to.y)/2.;
+	double dir = Math.signum(from.xPos*to.yPos - from.yPos*to.xPos);
+        double mx = (from.xPos + to.xPos)/2., my = (from.yPos + to.yPos)/2.;
+        double dx = (from.xPos - to.xPos)/2., dy = (from.yPos - to.yPos)/2.;
         double d = Math.hypot(dx, dy), h = Math.hypot(mx, my);
         double k = (4.*d)/(3.*(1.+h));
-        return new Point2D.Double(-k*dir*from.y, k*dir*from.x);
+        return new Point2D.Double(-k*dir*from.yPos, k*dir*from.xPos);
     }
 
     PseudoLinePath rimArc(RimPoint from, RimPoint to) {
-        double mx = (from.x + to.x)/2., my = (from.y + to.y)/2.;
-        double dx = (from.x - to.x)/2., dy = (from.y - to.y)/2.;
+        double mx = (from.xPos + to.xPos)/2., my = (from.yPos + to.yPos)/2.;
+        double dx = (from.xPos - to.xPos)/2., dy = (from.yPos - to.yPos)/2.;
         double d = Math.hypot(dx, dy), h = Math.hypot(mx, my);
         double k = (4.*d)/(3.*(1.+h));
         PseudoLinePath pth = new PseudoLinePath(2);
-        pth.addSymmetric(from.x, from.y, -k*from.y, k*from.x);
-        pth.addSymmetric(to.x, to.y, -k*to.y, k*to.x);
+        pth.addSymmetric(from.xPos, from.yPos, -k*from.yPos, k*from.xPos);
+        pth.addSymmetric(to.xPos, to.yPos, -k*to.yPos, k*to.xPos);
         return pth;
     }
 

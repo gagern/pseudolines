@@ -19,24 +19,161 @@
 package de.tum.ma.gagern.pseudolines;
 
 import java.awt.Shape;
+import java.util.AbstractSequentialList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
 class Cell {
 
-    List<PointOnLine> corners;
+    HalfEdge start;
+
+    private int size;
 
     Shape shape;
 
-    Cell(PointOnLine... corners) {
-        this.corners = Arrays.asList(corners);
+    Cell(HalfEdge start) {
+        HalfEdge repr = start;
+        size = 0;
+        HalfEdge he = start;
+        do {
+            he = he.connection.prev;
+            while (skip(he))
+                he = he.prev;
+            if (repr.center.id > he.center.id)
+                repr = he; // choose normalized starting edge
+            ++size;
+        } while (he != start);
+        this.start = repr;
+    }
+
+    boolean skip(HalfEdge he) {
+        return he.connection == null
+            || he.connection.center instanceof OpenEndPoint
+            ;
     }
 
     boolean isAtRim() {
-        for (PointOnLine corner: corners)
-            if (corner instanceof RimPoint)
+        for (PointOnLine p: this.corners())
+            if (p instanceof RimPoint)
                 return true;
         return false;
+    }
+
+    public int size() {
+        return size;
+    }
+
+    @Override public int hashCode() {
+        return start.hashCode();
+    }
+
+    @Override public boolean equals(Object o) {
+        return o instanceof Cell && start.equals(((Cell)o).start);
+    }
+
+    List<HalfEdge> edges() {
+        return new Edges();
+    }
+
+    List<PointOnLine> corners() {
+        return new Corners(new Edges());
+    }
+
+    //////////////////////////////////////////////////////////////////////
+    // List interface, AbstractSequentialList implementation
+
+    class Corners extends TransformingSequentialList<HalfEdge, PointOnLine> {
+
+        Corners(List<? extends HalfEdge> delegate) {
+            super(delegate);
+        }
+
+        protected PointOnLine transform(HalfEdge he) {
+            return he.center;
+        }
+
+    }
+
+    class Edges extends AbstractSequentialList<HalfEdge> {
+
+        public int size() {
+            return size;
+        }
+    
+        public ListIterator<HalfEdge> listIterator(int index) {
+            EdgeIter i = new EdgeIter();
+            while (index != 0) {
+                i.next();
+                --index;
+            }
+            return i;
+        }
+
+    }
+
+    class EdgeIter implements ListIterator<HalfEdge> {
+
+        HalfEdge cur;
+
+        int remaining;
+
+        EdgeIter() {
+            cur = start;
+            remaining = size;
+        }
+
+        public boolean hasNext() {
+            return remaining != 0;
+        }
+
+        public HalfEdge next() {
+            if (!hasNext())
+                throw new NoSuchElementException();
+            cur = cur.connection.prev;
+            while (skip(cur))
+                cur = cur.prev;
+            --remaining;
+            return cur;
+        }
+
+        public int nextIndex() {
+            return size - remaining;
+        }
+
+        public boolean hasPrevious() {
+            return cur != start || remaining == 0;
+        }
+
+        public HalfEdge previous() {
+            if (!hasPrevious())
+                throw new NoSuchElementException();
+            HalfEdge prev = cur;
+            cur = cur.next;
+            while (skip(cur))
+                cur = cur.next;
+            cur = cur.connection;
+            ++remaining;
+            return prev;
+        }
+
+        public int previousIndex() {
+            return size - remaining - 1;
+        }
+
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        public void set(HalfEdge e) {
+            throw new UnsupportedOperationException();
+        }
+
+        public void add(HalfEdge e) {
+            throw new UnsupportedOperationException();
+        }
+
     }
 
 }

@@ -20,24 +20,32 @@ package de.tum.ma.gagern.pseudolines;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 class Arrangement {
 
     int n;
 
-    List<PseudoLine> pls;
+    List<PseudoLine> lines;
 
-    private int nextPolID;
+    private int nextPointID;
 
-    List<PointOnLine> pols;
+    List<PointOnLine> points;
 
-    List<Cell> triangles;
+    Set<Cell> triangles;
 
     Arrangement(Chirotope chi, int circleLine) {
         n = chi.numElements();
-        pols = new ArrayList<PointOnLine>(n*n);
-        triangles = new ArrayList<Cell>(2*n);
+        if (n < 3)
+            throw new IllegalArgumentException("Chirotope too small");
+        points = new ArrayList<PointOnLine>(n*n);
+        triangles = new HashSet<Cell>(2*n);
+
+        // reorient so we have the rim line as index 0, and other
+        // lines numbered sequentially along the rim line.
         LineSequenceElement[][] lseq =
             LineSequenceElement.getLineSequence(chi, circleLine);
         int[] relabel = new int[n], reorient = new int[n];
@@ -52,25 +60,48 @@ class Arrangement {
             reorient[i] = elt.sign;
         }
         chi = new ReorientedChirotope(chi, relabel, reorient);
-        PseudoLine[] pls = new PseudoLine[n];
+
+        // create our list of pseudo lines
+        lines = new ArrayList<PseudoLine>(n);
         for (int i = 0; i < n; ++i) {
-            pls[i] = new PseudoLine();
+            PseudoLine line = new PseudoLine();
+            lines.add(line);
         }
+
+        PseudoLine rimLine = lines.get(0);
+        RimPoint rimDummy = new RimPoint(0, 0);
+        HalfEdge rimDummyStart = rimDummy.add(rimLine);
+        HalfEdge rimDummyEnd = rimDummyStart.opposite;
+        HalfEdge rimStartOut = rimDummyStart;
+        HalfEdge rimEndOut = rimDummyEnd;
         Intersection[] intersections = new Intersection[n*(n-1)/2];
-        PointOnLine[] ptsOnCurLine = new PointOnLine[n];
+
+        // Process each non-rim line and connect its intersections
         for (int i = 1; i < n; ++i) {
-            PseudoLine plsi = pls[i];
+            PseudoLine line = lines.get(i);
+
+            // choose location of rim point
             double angle = Math.PI*(i - 1)/(n - 1);
             double x = Math.cos(angle), y = Math.sin(angle);
-            RimPoint start = new RimPoint(x, y);
-            RimPoint end = new RimPoint(-x, -y);
-            addPOL(start);
-            addPOL(end);
-            pls[i].setEndPoints(start, end);
+            RimPoint startPoint = new RimPoint(x, y);
+            RimPoint endPoint = new RimPoint(-x, -y);
+            addPoint(startPoint);
+            addPoint(endPoint);
+
+            // connect rim line
+            HalfEdge rimStartIn = startPoint.add(rimLine);
+            HalfEdge rimEndIn = endPoint.add(rimLine);
+            rimStartIn.connect(rimStartOut);
+            rimEndIn.connect(rimEndOut);
+            rimStartOut = rimStartIn.opposite;
+            rimEndOut = rimEndIn.opposite;
+
+            // connect interiour pseudo line
+            HalfEdge startEdge = startPoint.add(line).opposite;
+            HalfEdge endEdge = endPoint.add(line).opposite;
             lseq = LineSequenceElement.getLineSequence(chi, i);
             assert lseq[0].length == 1 && lseq[0][0].line == 0;
-            ptsOnCurLine[0] = start;
-            ptsOnCurLine[lseq.length] = end;
+            HalfEdge out = startEdge, in;
             for (int j = 1; j < lseq.length; ++j) {
                 int min = i, max = i;
                 assert lseq[j].length > 0;
@@ -83,67 +114,93 @@ class Arrangement {
                 // index.
                 int index = max*(max - 1)/2 + min;
                 Intersection intersection = intersections[index];
-                if (intersections[index] == null) {
-                    intersections[index] = intersection =
-                        new Intersection(lseq[j].length + 1);
-                    addPOL(intersection);
+                if (intersection == null) {
+                    intersection = new Intersection();
+                    addPoint(intersection);
+                    intersections[index] = intersection;
                 }
-                ptsOnCurLine[j] = intersection;
+                in = intersection.add(line);
+                in.connect(out);
+                out = in.opposite;
             }
-            for (int j = 1; j < lseq.length; ++j) {
-                ptsOnCurLine[j].addCrossing
-                    (ptsOnCurLine[j - 1], plsi, ptsOnCurLine[j + 1]);
-            }
-            ptsOnCurLine[0].addCrossing
-                (ptsOnCurLine[1], plsi, null);
-            ptsOnCurLine[lseq.length].addCrossing
-                (ptsOnCurLine[lseq.length - 1], plsi, null);
+            out.connect(endEdge);
+            line.setEnds(startEdge, endEdge);
         }
-        PseudoLine prevLine = pls[(2*n - 2)%n], curLine = pls[n - 1];
-        EndPoint prevStart = prevLine.end, prevEnd = prevLine.start;
-        EndPoint curStart = curLine.end, curEnd = curLine.start;
-        for (int i = 1; i < n; ++i) {
-            PseudoLine nextLine = pls[i];
-            EndPoint nextStart = nextLine.start, nextEnd = nextLine.end;
-            curStart.addCrossing(prevStart, pls[0], nextStart);
-            curEnd.addCrossing(prevEnd, pls[0], nextEnd);
-            prevStart = curStart;
-            curStart = nextStart;
-            prevEnd = curEnd;
-            curEnd = nextEnd;
-        }
-        this.pls = new ArrayList<PseudoLine>(Arrays.asList(pls));
+
+        // now close the rim by connecting the two halves with one
+        // another
+        rimDummyStart.connection.connect(rimEndOut);
+        rimDummyEnd.connection.connect(rimStartOut);
+
+        // Done constructing the point graph, let's do other stuff
+        assert assertInvariants();
         findTriangles();
     }
 
-    void addPOL(PointOnLine pol) {
-        pol.id = nextPolID++;
-        pols.add(pol);
+    boolean assertInvariants() {
+        for (PointOnLine p: points)
+            for (HalfEdge he: p)
+                he.assertInvariants();
+        return true;
+    }
+
+    void addPoint(PointOnLine pt) {
+        pt.id = nextPointID++;
+        points.add(pt);
+    }
+
+    PseudoLine rimLine() {
+        return lines.get(0);
+    }
+
+    List<PseudoLine> innerLines() {
+        return lines.subList(1, lines.size());
     }
 
     void findTriangles() {
         triangles.clear();
-        for (PointOnLine a: pols) {
-            int na = a.numNeighbours();
-            PointOnLine b = a.neighbour(na - 1);
-            for (int i = 0; i < na; ++i) {
-                PointOnLine c = a.neighbour(i);
-                if (b != null && c != null && a.id < b.id && a.id < c.id
-                    && b.hasNeighbour(c)) {
-                    triangles.add(new Cell(a, b, c));
-                }
-                b = c;
+        for (PointOnLine p: points) {
+            for (HalfEdge a: p) {
+                // Edges of the triangle are ab, cd and ef, in ccw order
+                HalfEdge b = a.connection;
+                if (b == null)
+                    continue;
+                // HalfEdge c = b.prev;
+                HalfEdge d = b.prev.connection; // = c.connection
+                // HalfEdge f = a.next;
+                HalfEdge e = a.next.connection; // = f.connection
+                if (e == null || e.next != d)
+                    continue;
+                assert d.center == e.center;
+                if (p.id > b.center.id || p.id > d.center.id)
+                    continue;
+                triangles.add(new Cell(a));
             }
         }
+    }
+
+    boolean isTriangle(HalfEdge a) {
+        // Edges of the triangle are ab, cd and ef, in ccw order
+        HalfEdge b = a.connection;
+        if (b == null)
+            return false;
+        // HalfEdge c = b.prev;
+        HalfEdge d = b.prev.connection; // = c.connection
+        // HalfEdge f = a.next;
+        HalfEdge e = a.next.connection; // = f.connection
+        if (e == null || e.next != d)
+            return false;
+        assert d.center == e.center;
+        return true;
     }
 
     Snapshot snapshot(Layout layout) throws LinearSystemException {
         layout.arrangement = this;
         layout.performLayout(this);
         Snapshot snapshot = new Snapshot(this);
-        snapshot.circleLine = pls.get(0);
+        snapshot.circleLine = rimLine();
         for (int i = 1; i < n; ++i) {
-            PseudoLine pl = pls.get(i);
+            PseudoLine pl = lines.get(i);
             PseudoLinePath pth = layout.getPath(pl);
             pth.pseudoLine = pl;
             snapshot.paths.add(pth);
@@ -155,25 +212,65 @@ class Arrangement {
         return snapshot;
     }
 
-    void flip(Cell triangle) {
-        if (triangle.corners.size() != 3)
+    Cell flip(Cell triangle) {
+        return flip(triangle, null, null);
+    }
+
+    Cell flip(Cell triangle,
+              Collection<? super Cell> removedTriangles,
+              Collection<? super Cell> addedTriangles) {
+        if (triangle.size() != 3)
             throw new IllegalArgumentException("Not a triangle, cannot flip");
-        for (PointOnLine corner: triangle.corners) {
-            if (corner instanceof Intersection == false) {
-                return; // cannot flip that yet, simply ignore it
+        // We must save the list of edges, as we will modify the
+        // structure which would cause a concurrent modification.
+        HalfEdge[] edges = triangle.edges().toArray(new HalfEdge[3]);
+        for (HalfEdge he: edges) {
+            PointOnLine corner = he.center;
+            if (corner.numLines != 2 ||
+                corner instanceof Intersection == false) {
+                return triangle; // cannot flip that yet, simply ignore it
             }
         }
-        PointOnLine a = triangle.corners.get(0);
-        PointOnLine b = triangle.corners.get(1);
-        PointOnLine c = triangle.corners.get(2);
-        PointOnLine.swap(a, b);
-        PointOnLine.swap(b, c);
-        PointOnLine.swap(a, c);
-        /* We might one day choose to update only affected triangles.
-        triangle.shape = null;
-        Collections.swap(triangle.corners, 1, 2);
-        */
-        findTriangles();
+        triangles.remove(triangle);
+        for (HalfEdge he: edges) {
+            if (isTriangle(he.opposite)) {
+                Cell cell = new Cell(he.opposite);
+                if (triangles.remove(cell)) {
+                    if (removedTriangles != null)
+                        removedTriangles.add(cell);
+                }
+            }
+        }
+        HalfEdge newStart = edges[0].connection.opposite;
+        for (HalfEdge c: edges) {
+            /* We have half edges ab, cd and ef with points (bc) and
+             * (de) and want to reconnect them as ad, eb, cf
+             * preserving the same two intersection points. Remember
+             * that a and f might be null as well. One of the e points
+             * will be the start for the new triangle.
+             */
+            HalfEdge b = c.opposite, a = b.connection;
+            HalfEdge d = c.connection, e = d.opposite, f = e.connection;
+            b.connect(e);
+            c.connect(f);
+            d.connect(a);
+        }
+        if (true) { // update of modifications only doesn't work yet.
+            findTriangles();
+            return null;
+        }
+        triangle = new Cell(newStart);
+        triangles.add(triangle);
+        for (HalfEdge he: triangle.edges()) {
+            if (isTriangle(he.opposite)) {
+                Cell cell = new Cell(he.opposite);
+                boolean added = triangles.add(cell);
+                if (addedTriangles != null)
+                    addedTriangles.add(cell);
+                assert added;
+            }
+        }
+        return triangle;
     }
 
 }

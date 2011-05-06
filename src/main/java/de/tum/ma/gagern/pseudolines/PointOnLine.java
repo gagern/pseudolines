@@ -18,80 +18,191 @@
 
 package de.tum.ma.gagern.pseudolines;
 
-abstract class PointOnLine {
+import java.util.AbstractSequentialList;
+import java.util.ConcurrentModificationException;
+import java.util.ListIterator;
+import java.util.NoSuchElementException;
 
+abstract class PointOnLine extends AbstractSequentialList<HalfEdge> {
+
+    /**
+     * Some arbitrary identifier for this point. Unique within a given
+     * arrangement. Can be used to choose normal forms.
+     */
     int id;
 
-    private PointOnLine[] neighbours;
+    /**
+     * Pointer into the cyclic linked list of half segments.  Forward
+     * iteration becomes a bit easier if this is interpreted as the
+     * last element of the list, instead of the more obvious choice of
+     * first element. As the list is cyclic in any case, it should not
+     * really matter except for iteration order.
+     */
+    private HalfEdge last;
 
-    PointOnLine(int numPseudolines) {
-        neighbours = new PointOnLine[numPseudolines*2];
-    }
+    /**
+     * The number of pseudo lines at this point. This is half the
+     * number of half segments, as each line has two half segments
+     * centered here, one incoming and one outgoing.
+     */
+    int numLines;
 
     abstract LinVec2 getLocation();
 
-    int neighbourIndex(PointOnLine pt) {
-        for (int i = 0; i < neighbours.length; ++i)
-            if (neighbours[i] == pt)
-                return i;
-        throw new IllegalArgumentException("Argument is not a neighbour");
+    double xPos;
+
+    double yPos;
+
+    public HalfEdge add(PseudoLine line) {
+        if (last != null)
+            return addAfter(line, last.opposite);
+        HalfEdge in = new HalfEdge(), out = new HalfEdge();
+        in.center = out.center = this;
+        in.pseudoLine = out.pseudoLine = line;
+        in.index = 0;
+        out.index = 1;
+        in.opposite = in.prev = in.next = out;
+        out.opposite = out.prev = out.next = in;
+        last = out;
+        assert numLines == 0;
+        numLines = 1;
+        assert assertSanePair(in);
+        return in;
     }
 
-    int numNeighbours() {
-        return neighbours.length;
+    private HalfEdge addAfter(PseudoLine line, HalfEdge pos) {
+        HalfEdge in = new HalfEdge(), out = new HalfEdge();
+        in.center = out.center = this;
+        in.pseudoLine = out.pseudoLine = line;
+        in.opposite = out;
+        out.opposite = in;
+        in.prev = pos;
+        in.next = in.prev.next;
+        in.prev.next = in.next.prev = in;
+        out.prev = pos.opposite;
+        out.next = out.prev.next;
+        out.prev.next = out.next.prev = out;
+        if (last == out.prev)
+            last = out; // rather add to end not beginning
+        ++numLines;
+        reindex();
+        assert assertSanePair(in);
+        return in;
     }
 
-    PointOnLine neighbour(int index) {
-        return neighbours[index];
+    void reindex() {
+        int i = 0;
+        for (HalfEdge he: this)
+            he.index = i++;
+        ++modCount;
     }
 
-    boolean hasNeighbour(PointOnLine pt) {
-        for (int i = 0; i < neighbours.length; ++i)
-            if (neighbours[i] == pt)
-                return true;
-        return false;
+    HalfEdge firstEdge() {
+        return last.next;
     }
 
-    PointOnLine relativeNeighbour(PointOnLine reference, int offset) {
-        int idx = neighbourIndex(reference) + offset + neighbours.length;
-        return neighbours[idx%neighbours.length];
+    HalfEdge incoming(PseudoLine line) {
+        for (HalfEdge he: this)
+            if (he.pseudoLine == line)
+                return he;
+        throw new NoSuchElementException();
     }
 
-    PointOnLine opposite(PointOnLine incoming) {
-        return relativeNeighbour(incoming, neighbours.length/2);
+    HalfEdge outgoing(PseudoLine line) {
+        return incoming(line).opposite;
     }
 
-    void addCrossing(PointOnLine prev, PseudoLine line, PointOnLine next) {
-        if (prev == null)
-            throw new NullPointerException("prev must not be null");
-        int idx = neighbourIndex(null);
-        assert idx < neighbours.length/2;
-        assert neighbours[idx + neighbours.length/2] == null;
-        neighbours[idx] = prev;
-        neighbours[idx + neighbours.length/2] = next;
+    boolean assertSanePair(HalfEdge in) {
+        HalfEdge out = in.opposite;
+        assert in.assertInvariants();
+        assert out.assertInvariants();
+        assert in.index + numLines == out.index;
+        return true;
     }
 
-    void replace(PointOnLine search, PointOnLine replace) {
-        neighbours[neighbourIndex(search)] = replace;
+    //////////////////////////////////////////////////////////////////////
+    // List interface, AbstractSequentialList implementation
+
+    public int size() {
+        return 2*numLines;
     }
 
-    static void swap(PointOnLine b, PointOnLine c) {
-        PointOnLine[] nb = b.neighbours, nc = c.neighbours;
-        int lb = nb.length, lc = nc.length;
-        int ib = b.neighbourIndex(c), ic = c.neighbourIndex(b);
-        int jb = (ib + lb/2)%lb, jc = (ic + lc/2)%lc;
-        
-        // old: a - b - c - d
-        // new: a - c - b - d
-        PointOnLine a = nb[jb], d = nc[jc];
-        if (a == null || d == null)
-            throw new IllegalArgumentException("Cannot swap end points");
-        a.replace(b,c);
-        nc[ic] = a;
-        nc[jc] = b;
-        nb[jb] = c;
-        nb[ib] = d;
-        d.replace(c, b);
+    public ListIterator<HalfEdge> listIterator(int index) {
+        Iter i = new Iter();
+        while (index != 0) {
+            i.next();
+            --index;
+        }
+        return i;
+    }
+
+    class Iter implements ListIterator<HalfEdge> {
+
+        HalfEdge cur;
+
+        int remaining;
+
+        int mc;
+
+        Iter() {
+            cur = last;
+            remaining = size();
+            mc = modCount;
+        }
+
+        public boolean hasNext() {
+            return remaining != 0;
+        }
+
+        public HalfEdge next() {
+            checkMod();
+            if (!hasNext())
+                throw new NoSuchElementException();
+            assert cur.next.prev == cur;
+            cur = cur.next;
+            --remaining;
+            return cur;
+        }
+
+        public int nextIndex() {
+            return size() - remaining;
+        }
+
+        public boolean hasPrevious() {
+            return cur != last || (remaining == 0 && cur != null);
+        }
+
+        public HalfEdge previous() {
+            checkMod();
+            if (!hasPrevious())
+                throw new NoSuchElementException();
+            assert cur.prev.next == cur;
+            cur = cur.prev;
+            ++remaining;
+            return cur.next;
+        }
+
+        public int previousIndex() {
+            return size() - remaining - 1;
+        }
+
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        public void set(HalfEdge e) {
+            throw new UnsupportedOperationException();
+        }
+
+        public void add(HalfEdge e) {
+            throw new UnsupportedOperationException();
+        }
+
+        private void checkMod() {
+            if (mc != modCount)
+                throw new ConcurrentModificationException();
+        }
+
     }
 
 }
