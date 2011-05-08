@@ -28,13 +28,7 @@ import java.awt.geom.Rectangle2D;
 
 class PseudoLinePath implements Shape {
 
-    private static final int COORDS_PER_POINT = 6;
-    private static final int POS_X = 0;
-    private static final int POS_Y = POS_X + 1;
-    private static final int DIR_X = 2;
-    private static final int DIR_Y = DIR_X + 1;
-    private static final int LEN_IN = 4;
-    private static final int LEN_OUT = 5;
+    private static final int FIRST_POINT = 0;
 
     PseudoLine pseudoLine;
 
@@ -42,27 +36,52 @@ class PseudoLinePath implements Shape {
 
     int length;
 
+    boolean closed;
+
     PseudoLinePath(int maxPoints) {
-        coords = new double[maxPoints*COORDS_PER_POINT];
-        length = 0;
+        coords = new double[maxPoints*6];
+        length = FIRST_POINT;
+        closed = false;
     }
 
-    void addPoint(double px, double py,
-                  double dx, double dy,
-                  double inLength, double outLength) {
-        coords[length + POS_X  ] = px;
-        coords[length + POS_Y  ] = py;
-        coords[length + DIR_X  ] = dx;
-        coords[length + DIR_Y  ] = dy;
-        coords[length + LEN_IN ] = inLength;
-        coords[length + LEN_OUT] = outLength;
-        length += COORDS_PER_POINT;
+    void addPoint(PointOnLine point) {
+        if (length%6 != FIRST_POINT)
+            throw new IllegalStateException("Control expected not point");
+        assert !Double.isNaN(point.xPos);
+        assert !Double.isNaN(point.yPos);
+        assert !Double.isInfinite(point.xPos);
+        assert !Double.isInfinite(point.yPos);
+        coords[length] = point.xPos;
+        coords[length + 1] = point.yPos;
+        length += 2;
     }
 
-    void addSymmetric(double x, double y, double dx, double dy) {
-        addPoint(x, y, dx, dy, 1., 1.);
+    void addControl(HalfEdge he) {
+        if (length%6 == FIRST_POINT)
+            throw new IllegalStateException("Point expected not control");
+        assert !Double.isNaN(he.xCtrl);
+        assert !Double.isNaN(he.yCtrl);
+        assert !Double.isInfinite(he.xCtrl);
+        assert !Double.isInfinite(he.yCtrl);
+        coords[length] = he.xCtrl;
+        coords[length + 1] = he.yCtrl;
+        length += 2;
     }
 
+    void close() {
+        if (length%6 == FIRST_POINT) {
+            if (length == FIRST_POINT)
+                throw new IllegalStateException("Empty path may not be closed");
+            coords[length] = coords[FIRST_POINT];
+            coords[length + 1] = coords[FIRST_POINT + 1];
+            length += 2;
+        }
+        if (length%6 != FIRST_POINT + 2) {
+            throw new IllegalStateException("Path does not end on a point");
+        }
+        closed = true;
+    }
+ 
     // Implementation of Shape
 
     public boolean contains(double x, double y) {
@@ -85,14 +104,14 @@ class PseudoLinePath implements Shape {
         double right = left+w, bottom = top+h;
         boolean allLeft = true, allRight = true;
         boolean allTop = true, allBottom = true;
-        for (int i = 0; i < coords.length; i += 2) {
+        for (int i = FIRST_POINT; i < length; i += 2) {
             double x = coords[i], y = coords[i + 1];
             allLeft &= (x < left);
             allRight &= (x > right);
             allTop &= (y < top);
             allBottom &= (y > bottom);
         }
-        return allLeft || allRight || allTop || allBottom;
+        return !(allLeft || allRight || allTop || allBottom);
     }
 
     public boolean intersects(Rectangle2D rect) {
@@ -105,66 +124,57 @@ class PseudoLinePath implements Shape {
     }
 
     public Rectangle2D getBounds2D() {
-        Rectangle2D.Double rect =
-            new Rectangle2D.Double(Double.POSITIVE_INFINITY,
-                                   Double.POSITIVE_INFINITY,
-                                   Double.NEGATIVE_INFINITY,
-                                   Double.NEGATIVE_INFINITY);
-        for (int i = 0; i < coords.length; i += 2)
+        if (length == FIRST_POINT)
+            return new Rectangle();
+        Rectangle2D.Double rect = new Rectangle2D.Double
+            (coords[FIRST_POINT], coords[FIRST_POINT + 1], 0., 0.);
+        for (int i = FIRST_POINT + 2; i < length; i += 2)
             rect.add(coords[i], coords[i + 1]);
         return rect;
     }
 
     public PathIterator getPathIterator(AffineTransform at) {
+        if (length%6 != FIRST_POINT + 2)
+            throw new IllegalStateException("Path not closed on a point.");
         return new PseudoLineIterator(at);
     }
 
     public PathIterator getPathIterator(AffineTransform at, double flatness) {
         return new FlatteningPathIterator(getPathIterator(at), flatness);
     }
- 
+
     class PseudoLineIterator extends AbstractPathIterator {
+
+        private static final int FIRST_POS = FIRST_POINT - 4;
 
         int pos;
 
         PseudoLineIterator(AffineTransform at) {
             super(at);
-            pos = 0;
+            pos = FIRST_POS;
         }
 
         protected int rawSegment(double[] c) {
-            if (pos != 0) {
-                double px1 = coords[pos + (POS_X - COORDS_PER_POINT)];
-                double py1 = coords[pos + (POS_Y - COORDS_PER_POINT)];
-                double dx1 = coords[pos + (DIR_X - COORDS_PER_POINT)];
-                double dy1 = coords[pos + (DIR_Y - COORDS_PER_POINT)];
-                double l1 = coords[pos + (LEN_OUT - COORDS_PER_POINT)];
-                double px2 = coords[pos + POS_X];
-                double py2 = coords[pos + POS_Y];
-                double dx2 = coords[pos + DIR_X];
-                double dy2 = coords[pos + DIR_Y];
-                double l2 = coords[pos + LEN_IN];
-                c[0] = px1 + dx1*l1;
-                c[1] = py1 + dy1*l1;
-                c[2] = px2 - dx2*l2;
-                c[3] = py2 - dy2*l2;
-                c[4] = px2;
-                c[5] = py2;
-                return SEG_CUBICTO;
-            }
-            else {
-                c[0] = coords[POS_X];
-                c[1] = coords[POS_Y];
+            if (pos == FIRST_POS) {
+                c[0] = coords[FIRST_POINT];
+                c[1] = coords[FIRST_POINT + 1];
                 return SEG_MOVETO;
             }
+            if (pos == length) {
+                return SEG_CLOSE;
+            }
+            System.arraycopy(coords, pos, c, 0, 6);
+            return SEG_CUBICTO;
         }
 
         public boolean isDone() {
+            if (closed)
+                return pos > length;
             return pos >= length;
         }
 
         public void next() {
-            pos += COORDS_PER_POINT;
+            pos += 6;
         }
 
     }

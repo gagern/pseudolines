@@ -71,7 +71,7 @@ public class PseudoLineView
     public PseudoLineView() throws LinearSystemException {
         Chirotope chi = Catalog.getCatalog().get(0).getChirotope();
         arr = new Arrangement(chi, 0);
-        layout = new BezierLayout();
+        layout = new SplineLayout();
         snapshot = arr.snapshot(layout);
         addComponentListener(new ComponentAdapter() {
                 @Override public void componentResized(ComponentEvent evnt) {

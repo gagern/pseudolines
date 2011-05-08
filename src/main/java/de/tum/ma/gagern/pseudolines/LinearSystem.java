@@ -48,6 +48,8 @@ class LinearSystem {
             v.index = r;
             vars[r] = v;
             x[r] = v.value;
+            if (Double.isNaN(x[r]) || Double.isInfinite(x[r]))
+                x[r] = 0.;
         }
         for (int r = 0; r < size; ++r) {
             Equation eq = equations.get(r);
@@ -61,7 +63,14 @@ class LinearSystem {
                         ("Variable not on any diagonal");
                 int idx = v.index;
                 double coeff = eq.coeff(i);
+                if (Double.isNaN(coeff))
+                    throw new LinearSystemException("Coefficient is NaN");
+                if (Double.isInfinite(coeff))
+                    throw new LinearSystemException("Coefficient is infinite");
                 if (idx == r) {
+                    if (coeff == 0.)
+                        throw new LinearSystemException
+                            ("Diagonal coefficient is zero");
                     diag[r] = coeff;
                 }
                 else {

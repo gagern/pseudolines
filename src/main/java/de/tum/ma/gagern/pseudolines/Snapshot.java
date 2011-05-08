@@ -41,7 +41,43 @@ class Snapshot {
 
     public void render(PseudoLineRenderer renderer) {
         for (CellShape triangle: triangles) {
-            renderer.renderCell(triangle.cell, triangle.getShape());
+            try {
+                renderer.renderCell(triangle.cell, triangle.getShape());
+            }
+            catch (ClassCastException e) {
+                e.printStackTrace();
+                double[] c = new double[6];
+                for (int i = 0; i < triangle.edges.length; ++i) {
+                    System.err.println("edges[" + i + "]");
+                    java.awt.geom.PathIterator pi =
+                        triangle.edges[i].getPathIterator(null);
+                    while (!pi.isDone()) {
+                        java.util.Arrays.fill(c, -123.);
+                        int type = pi.currentSegment(c);
+                        int nc;
+                        String tn;
+                        switch (type) {
+                        case java.awt.geom.PathIterator.SEG_MOVETO:
+                            tn = " SEG_MOVETO:";
+                            nc = 2;
+                            break;
+                        case java.awt.geom.PathIterator.SEG_CUBICTO:
+                            tn = " SEG_CUBICTO:";
+                            nc = 6;
+                            break;
+                        default:
+                            tn = " (" + type + "):";
+                            nc = 6;
+                        }
+                        System.err.println(tn);
+                        for (int j = 0; j < nc; ++j) {
+                            System.err.println("  c[" + j + "]=" + c[j]);
+                        }
+                        pi.next();
+                    }
+                }
+                System.exit(1);
+            }
         }
         for (PseudoLinePath p: paths) {
             renderer.renderLine(p.pseudoLine, p);

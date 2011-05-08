@@ -19,6 +19,7 @@
 package de.tum.ma.gagern.pseudolines;
 
 import java.awt.geom.Point2D;
+import java.util.Iterator;
 
 abstract class Layout {
 
@@ -35,33 +36,41 @@ abstract class Layout {
             addEquations((Intersection)pt);
     }
 
-    abstract void addEquations(Intersection pt);
+    void addEquations(Intersection pt) {
+        int n = pt.size();
+        assert n > 0;
+        LinVec2 eqPos = pt.pos.scale(-n);
+        for (HalfEdge he: pt) {
+            eqPos = eqPos.add(he.connection.center.getLocation());
+        }
+        ls.eqZero(eqPos);
+    }
 
     PseudoLinePath getPath(PseudoLine pl) {
         PseudoLinePath pth = new PseudoLinePath(arrangement.n);
-        HalfEdge out = pl.start, in;
-        do {
-            pth.addSymmetric(out.center.xPos, out.center.yPos,
-                             out.xCtrl - out.center.xPos,
-                             out.yCtrl - out.center.yPos);
-            in = out.connection;
-            out = in.opposite;
-        } while (in != pl.end);
-        pth.addSymmetric(in.center.xPos, in.center.yPos,
-                         in.center.xPos - in.xCtrl,
-                         in.center.yPos - in.yCtrl);
+        pth.pseudoLine = pl;
+        pth.addPoint(pl.start.center);
+        Iterator<HalfEdge> iter = pl.allHalfEdges().iterator();
+        while (iter.hasNext()) {
+            HalfEdge he = iter.next();
+            pth.addControl(he);
+            he = iter.next();
+            pth.addControl(he);
+            pth.addPoint(he.center);
+        }
+        if (pl.start.center == pl.end.center)
+            pth.close();
         return pth;
     }
 
     PseudoLinePath getEdge(HalfEdge edge) {
         PseudoLinePath pth = new PseudoLinePath(2);
-        pth.addSymmetric(edge.center.xPos, edge.center.yPos,
-                         edge.xCtrl - edge.center.xPos,
-                         edge.yCtrl - edge.center.yPos);
+        pth.pseudoLine = edge.pseudoLine;
+        pth.addPoint(edge.center);
+        pth.addControl(edge);
         edge = edge.connection;
-        pth.addSymmetric(edge.center.xPos, edge.center.yPos,
-                         edge.center.xPos - edge.xCtrl,
-                         edge.center.yPos - edge.yCtrl);
+        pth.addControl(edge);
+        pth.addPoint(edge.center);
         return pth;
     }
 
@@ -85,6 +94,10 @@ abstract class Layout {
             LinVec2 loc = point.getLocation();
             point.xPos = loc.getXTerm().getValue();
             point.yPos = loc.getYTerm().getValue();
+            assert !Double.isNaN(point.xPos);
+            assert !Double.isNaN(point.yPos);
+            assert !Double.isInfinite(point.xPos);
+            assert !Double.isInfinite(point.yPos);
         }
         for (PseudoLine pl: arr.lines)
             layoutLine(pl);
@@ -114,17 +127,6 @@ abstract class Layout {
         double d = Math.hypot(dx, dy), h = Math.hypot(mx, my);
         double k = (4.*d)/(3.*(1.+h));
         return new Point2D.Double(-k*dir*from.yPos, k*dir*from.xPos);
-    }
-
-    PseudoLinePath rimArc(RimPoint from, RimPoint to) {
-        double mx = (from.xPos + to.xPos)/2., my = (from.yPos + to.yPos)/2.;
-        double dx = (from.xPos - to.xPos)/2., dy = (from.yPos - to.yPos)/2.;
-        double d = Math.hypot(dx, dy), h = Math.hypot(mx, my);
-        double k = (4.*d)/(3.*(1.+h));
-        PseudoLinePath pth = new PseudoLinePath(2);
-        pth.addSymmetric(from.xPos, from.yPos, -k*from.yPos, k*from.xPos);
-        pth.addSymmetric(to.xPos, to.yPos, -k*to.yPos, k*to.xPos);
-        return pth;
     }
 
 }

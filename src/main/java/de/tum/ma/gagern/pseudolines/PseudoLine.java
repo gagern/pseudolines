@@ -33,12 +33,19 @@ class PseudoLine {
     Color color = Color.BLACK;
 
     void setEnds(HalfEdge start, HalfEdge end) {
+        assert (start.opposite == end && end.opposite == start)
+            || (start.opposite.connection == null &&
+                end.opposite.connection == null);
         this.start = start;
         this.end = end;
     }
 
     List<HalfEdge> allHalfEdges() {
         return new AllHalfEdges();
+    }
+
+    List<PointOnLine> points() {
+        return new Points();
     }
 
     class AllHalfEdges extends AbstractSequentialList<HalfEdge> {
@@ -122,6 +129,90 @@ class PseudoLine {
         }
 
         public void add(HalfEdge e) {
+            throw new UnsupportedOperationException();
+        }
+
+    }
+
+    class Points extends AbstractSequentialList<PointOnLine> {
+
+        public int size() {
+            PointIter i = new PointIter();
+            int size = 0;
+            while (i.hasNext()) {
+                i.next();
+                ++size;
+            }
+            return size;
+        }
+
+        public ListIterator<PointOnLine> listIterator(int index) {
+            PointIter i = new PointIter();
+            while (index != 0) {
+                i.next();
+                --index;
+            }
+            return i;
+        }
+
+    }
+
+    class PointIter implements ListIterator<PointOnLine> {
+
+        HalfEdge cur = start.opposite;
+
+        int pos = 0;
+
+        public boolean hasNext() {
+            return cur != null && (cur != start.opposite || pos == 0);
+        }
+
+        public PointOnLine next() {
+            if (!hasNext())
+                throw new NoSuchElementException();
+            PointOnLine p = cur.center;
+            /* The following line is the reason we iterate over in
+             * edges, not out edges: then we have opposite first,
+             * which is never null, and connection second, which may
+             * be null.
+             */
+            cur = cur.opposite.connection;
+            ++pos;
+            return p;
+        }
+
+        public int nextIndex() {
+            return pos + 1;
+        }
+
+        public boolean hasPrevious() {
+            return pos > 0;
+        }
+
+        public PointOnLine previous() {
+            if (!hasPrevious())
+                throw new NoSuchElementException();
+            if (cur == null)
+                cur = end;
+            else
+                cur = cur.connection.opposite;
+            --pos;
+            return cur.center;
+        }
+
+        public int previousIndex() {
+            return pos;
+        }
+
+        public void remove() {
+            throw new UnsupportedOperationException();
+        }
+
+        public void set(PointOnLine e) {
+            throw new UnsupportedOperationException();
+        }
+
+        public void add(PointOnLine e) {
             throw new UnsupportedOperationException();
         }
 
