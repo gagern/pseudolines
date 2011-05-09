@@ -63,23 +63,16 @@ abstract class Layout {
         return pth;
     }
 
-    PseudoLinePath getEdge(HalfEdge edge) {
-        PseudoLinePath pth = new PseudoLinePath(2);
-        pth.pseudoLine = edge.pseudoLine;
-        pth.addPoint(edge.center);
-        pth.addControl(edge);
-        edge = edge.connection;
-        pth.addControl(edge);
-        pth.addPoint(edge.center);
-        return pth;
-    }
-
     CellShape getShape(Cell cell) {
-        int n = cell.size();
+        CubicPath pth = new CubicPath(cell.size() + 1);
+        for (HalfEdge he: cell.edges()) {
+            pth.addPoint(he.center);
+            pth.addControl(he);
+            pth.addControl(he.connection);
+        }
+        pth.close();
         CellShape cs = new CellShape(cell);
-        int i = 0;
-        for (HalfEdge e: cell.edges())
-            cs.edges[i++] = getEdge(e);
+        cs.path = pth;
         cell.shape = cs.getShape();
         return cs;
     }

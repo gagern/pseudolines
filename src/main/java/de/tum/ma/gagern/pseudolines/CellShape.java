@@ -24,7 +24,7 @@ import java.awt.geom.Path2D;
 
 class CellShape {
 
-    PseudoLinePath[] edges;
+    CubicPath path;
 
     Cell cell;
 
@@ -32,7 +32,6 @@ class CellShape {
 
     CellShape(Cell cell) {
         this.cell = cell;
-        edges = new PseudoLinePath[cell.size()];
     }
 
     Shape getShape() {
@@ -42,12 +41,7 @@ class CellShape {
     }
 
     Shape calculateShape() {
-        Path2D.Double res =
-            new Path2D.Double(Path2D.WIND_NON_ZERO, 2*edges.length + 1);
-        for (PseudoLinePath edge: edges)
-            res.append(edge, true);
-        res.closePath();
-        return new Area(res);
+        return new Area(path);
     }
 
 }
