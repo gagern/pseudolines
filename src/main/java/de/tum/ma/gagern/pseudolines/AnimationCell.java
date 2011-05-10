@@ -18,14 +18,16 @@
 
 package de.tum.ma.gagern.pseudolines;
 
-import java.awt.Shape;
+class AnimationCell {
 
-interface PseudoLineRenderer {
+    Cell cell;
 
-    public void renderLine(PseudoLine pl, Shape shape);
+    CellShape before;
 
-    public void renderCell(Cell cell, Shape shape);
+    CellShape after;
 
-    public void setAlpha(double alpha);
+    AnimationCell(Cell cell) {
+        this.cell = cell;
+    }
 
 }

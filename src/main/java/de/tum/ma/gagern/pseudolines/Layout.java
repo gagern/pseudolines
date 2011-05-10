@@ -73,7 +73,6 @@ abstract class Layout {
         pth.close();
         CellShape cs = new CellShape(cell);
         cs.path = pth;
-        cell.shape = cs.getShape();
         return cs;
     }
 

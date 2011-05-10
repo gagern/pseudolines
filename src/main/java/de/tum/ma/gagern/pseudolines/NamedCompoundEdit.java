@@ -18,14 +18,28 @@
 
 package de.tum.ma.gagern.pseudolines;
 
-import java.awt.Shape;
+import javax.swing.undo.CompoundEdit;
 
-interface PseudoLineRenderer {
+class NamedCompoundEdit extends CompoundEdit {
 
-    public void renderLine(PseudoLine pl, Shape shape);
+    private String name;
 
-    public void renderCell(Cell cell, Shape shape);
+    public NamedCompoundEdit(String name) {
+        this.name = name;
+    }
 
-    public void setAlpha(double alpha);
+    public NamedCompoundEdit() {
+        this(null);
+    }
+
+    @Override public String getPresentationName() {
+        if (name == null)
+            return super.getPresentationName();
+        return name;
+    }
+
+    public void setPresentationName(String name) {
+        this.name = name;
+    }
 
 }

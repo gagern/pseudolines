@@ -25,6 +25,8 @@ import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.Stroke;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseEvent;
@@ -33,12 +35,15 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.util.Collection;
 import javax.swing.JComponent;
+import javax.swing.Timer;
 import javax.swing.event.MouseInputAdapter;
 
 public class PseudoLineView
     extends JComponent
     implements PseudoLineRenderer
 {
+
+    private static final int ANIMATION_DELAY = 20;
 
     private static final int RIM_SIZE = 20;
 
@@ -54,9 +59,15 @@ public class PseudoLineView
 
     private Layout layout;
 
+    private Animation animation;
+
+    private Timer animTimer;
+
     private Snapshot snapshot;
 
     private Color triangleColor;
+
+    private Color mixedTriangleColor;
 
     private boolean fillRimCells = true;
 
@@ -78,10 +89,18 @@ public class PseudoLineView
                     unitCircleTransform = null;
                 }
             });
+        animTimer = new Timer(ANIMATION_DELAY, new ActionListener() {
+                public void actionPerformed(ActionEvent evnt) {
+                    repaint();
+                }
+            });
+        animTimer.setInitialDelay(ANIMATION_DELAY/4);
         Mouser mouser = new Mouser();
         addMouseListener(mouser);
         addMouseMotionListener(mouser);
         triangleColor = new Color(0xffaa00);
+        mixedTriangleColor = triangleColor;
+        setBackground(new Color(0xcccccc));
     }
 
     AffineTransform unitCircleTransform() {
@@ -103,6 +122,8 @@ public class PseudoLineView
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         int w = getWidth(), h = getHeight();
+        g.setColor(getBackground());
+        g.fillRect(0, 0, w, h);
         if (w < MIN_TOTAL_SIZE || h < MIN_TOTAL_SIZE)
             return;
         g2d = (Graphics2D)g.create();
@@ -122,8 +143,17 @@ public class PseudoLineView
                              RenderingHints.VALUE_DITHER_DISABLE);
         g2d.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL,
                              RenderingHints.VALUE_STROKE_PURE);
-        snapshot.render(this);
-        //drawControlPoints(arr.points, Color.RED);
+        g2d.setColor(Color.WHITE);
+        g2d.fill(Snapshot.UNIT_CIRCLE);
+        if (animation == null) {
+            snapshot.render(this);
+            //drawControlPoints(arr.points, Color.RED);
+        }
+        else if (!animation.animate()) {
+            animation = null;
+            animTimer.stop();
+            snapshot.render(this);
+        }
         g2d.dispose();
         g2d = null;
     }
@@ -151,21 +181,45 @@ public class PseudoLineView
     public void renderCell(Cell cell, Shape shape) {
         if (cell.size() == 3 &&
             (fillRimCells || !cell.isAtRim())) {
-            g2d.setColor(triangleColor);
+            g2d.setColor(mixedTriangleColor);
             g2d.fill(shape);
         }
     }
 
-    void flip(CellShape triangle) {
-        arr.flip(triangle.cell);
+    public void setAlpha(double alpha) {
+        if (alpha == 1.) {
+            mixedTriangleColor = triangleColor;
+        }
+        else {
+            mixedTriangleColor = mixColor(alpha, Color.WHITE, triangleColor);
+        }
+    }
+
+    Color mixColor(double f, Color color0, Color color1) {
+        float[] c0 = new float[4];
+        float[] c1 = new float[4];
+        color0.getRGBComponents(c0);
+        color1.getRGBComponents(c1);
+        for (int i = 0; i < 4; ++i)
+            c0[i] = (float)((1. - f)*c0[i] + f*c1[i]);
+        return new Color(c0[0], c0[1], c0[2], c0[3]);
+    }
+
+    void startAnimation(Animation anim) {
         try {
-            snapshot = arr.snapshot(layout);
-            repaint();
+            snapshot = anim.plan(arr, layout, snapshot);
         }
         catch (LinearSystemException e) {
             e.printStackTrace();
-            arr.flip(triangle.cell);
+            return;
         }
+        animation = anim;
+        anim.start(this);
+        animTimer.start();
+    }
+
+    void flip(Cell triangle) {
+        startAnimation(new FlipAnimation(triangle));
     }
 
     private class Mouser extends MouseInputAdapter {
@@ -174,9 +228,9 @@ public class PseudoLineView
             Point2D.Double pt = new Point2D.Double(evnt.getX() + .5,
                                                    evnt.getY() + .5);
             toUnitCircle(pt, pt);
-            for (CellShape triangle: snapshot.triangles) {
+            for (CellShape triangle: snapshot.triangles()) {
                 if (triangle.getShape().contains(pt)) {
-                    flip(triangle);
+                    flip(triangle.cell);
                     return;
                 }
             }

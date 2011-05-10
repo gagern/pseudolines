@@ -38,6 +38,11 @@ class PseudoLine {
                 end.opposite.connection == null);
         this.start = start;
         this.end = end;
+        byte directionSign = 1;
+        for (HalfEdge he: allHalfEdges()) {
+            he.directionSign = directionSign;
+            directionSign = (byte)-directionSign;
+        }
     }
 
     List<HalfEdge> allHalfEdges() {

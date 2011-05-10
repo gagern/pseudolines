@@ -182,98 +182,11 @@ class Arrangement {
         }
     }
 
-    boolean isTriangle(HalfEdge a) {
-        // Edges of the triangle are ab, cd and ef, in ccw order
-        HalfEdge b = a.connection;
-        if (b == null)
-            return false;
-        // HalfEdge c = b.prev;
-        HalfEdge d = b.prev.connection; // = c.connection
-        // HalfEdge f = a.next;
-        HalfEdge e = a.next.connection; // = f.connection
-        if (e == null || e.next != d)
-            return false;
-        assert d.center == e.center;
-        return true;
-    }
-
     Snapshot snapshot(Layout layout) throws LinearSystemException {
         layout.arrangement = this;
         layout.performLayout(this);
-        Snapshot snapshot = new Snapshot(this);
-        snapshot.circleLine = rimLine();
-        for (int i = 1; i < n; ++i) {
-            PseudoLine pl = lines.get(i);
-            PseudoLinePath pth = layout.getPath(pl);
-            pth.pseudoLine = pl;
-            snapshot.paths.add(pth);
-        }
-        for (Cell triangle: triangles) {
-            CellShape cs = layout.getShape(triangle);
-            snapshot.triangles.add(cs);
-        }
+        Snapshot snapshot = new Snapshot(this, layout);
         return snapshot;
-    }
-
-    Cell flip(Cell triangle) {
-        return flip(triangle, null, null);
-    }
-
-    Cell flip(Cell triangle,
-              Collection<? super Cell> removedTriangles,
-              Collection<? super Cell> addedTriangles) {
-        if (triangle.size() != 3)
-            throw new IllegalArgumentException("Not a triangle, cannot flip");
-        // We must save the list of edges, as we will modify the
-        // structure which would cause a concurrent modification.
-        HalfEdge[] edges = triangle.edges().toArray(new HalfEdge[3]);
-        for (HalfEdge he: edges) {
-            PointOnLine corner = he.center;
-            if (corner.numLines != 2 ||
-                corner instanceof Intersection == false) {
-                return triangle; // cannot flip that yet, simply ignore it
-            }
-        }
-        triangles.remove(triangle);
-        for (HalfEdge he: edges) {
-            if (isTriangle(he.opposite)) {
-                Cell cell = new Cell(he.opposite);
-                if (triangles.remove(cell)) {
-                    if (removedTriangles != null)
-                        removedTriangles.add(cell);
-                }
-            }
-        }
-        HalfEdge newStart = edges[0].connection.opposite;
-        for (HalfEdge c: edges) {
-            /* We have half edges ab, cd and ef with points (bc) and
-             * (de) and want to reconnect them as ad, eb, cf
-             * preserving the same two intersection points. Remember
-             * that a and f might be null as well. One of the e points
-             * will be the start for the new triangle.
-             */
-            HalfEdge b = c.opposite, a = b.connection;
-            HalfEdge d = c.connection, e = d.opposite, f = e.connection;
-            b.connect(e);
-            c.connect(f);
-            d.connect(a);
-        }
-        if (true) { // update of modifications only doesn't work yet.
-            findTriangles();
-            return null;
-        }
-        triangle = new Cell(newStart);
-        triangles.add(triangle);
-        for (HalfEdge he: triangle.edges()) {
-            if (isTriangle(he.opposite)) {
-                Cell cell = new Cell(he.opposite);
-                boolean added = triangles.add(cell);
-                if (addedTriangles != null)
-                    addedTriangles.add(cell);
-                assert added;
-            }
-        }
-        return triangle;
     }
 
 }

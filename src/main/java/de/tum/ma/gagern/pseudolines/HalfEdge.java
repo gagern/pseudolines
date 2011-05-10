@@ -18,6 +18,9 @@
 
 package de.tum.ma.gagern.pseudolines;
 
+import javax.swing.undo.AbstractUndoableEdit;
+import javax.swing.undo.CompoundEdit;
+
 class HalfEdge {
 
     /**
@@ -67,6 +70,14 @@ class HalfEdge {
      * The pseudo line this segment belongs to.
      */
     PseudoLine pseudoLine;
+
+    /**
+     * Sign indicating the direction of the edge on its pseudo line.
+     * This will be +1 if the edge is a forward edge (i.e. leads away
+     * from an intersection in the positive direction of the pseudo
+     * line) or -1 otherwise.
+     */
+    byte directionSign;
 
     /**
      * Variable vector for the direction of the control point. Only
@@ -125,6 +136,46 @@ class HalfEdge {
             assert that.assertInvariants();
         }
         assert this.assertInvariants();
+    }
+
+    void connect(HalfEdge that, CompoundEdit edit) {
+        edit.addEdit(new ConnectEdit(that));
+        connect(that);
+    }
+
+    class ConnectEdit extends AbstractUndoableEdit {
+
+        HalfEdge thisConnection;
+
+        HalfEdge that;
+
+        HalfEdge thatConnection;
+
+        ConnectEdit(HalfEdge that) {
+            thisConnection = connection;
+            this.that = that;
+            if (that == null)
+                thatConnection = null;
+            else
+                thatConnection = that.connection;
+        }
+
+        @Override public void undo() {
+            super.undo();
+            connect(thisConnection);
+            if (that != null)
+                that.connect(thatConnection);
+        }
+
+        @Override public void redo() {
+            super.redo();
+            connect(that);
+        }
+
+        @Override public String getPresentationName() {
+            return "Connection";
+        }
+
     }
 
 }

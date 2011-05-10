@@ -31,8 +31,6 @@ class Cell {
 
     private int size;
 
-    Shape shape;
-
     Cell(HalfEdge start) {
         HalfEdge repr = start;
         size = 0;
@@ -79,6 +77,21 @@ class Cell {
 
     List<PointOnLine> corners() {
         return new Corners(new Edges());
+    }
+
+    static boolean isTriangle(HalfEdge a) {
+        // Edges of the triangle are ab, cd and ef, in ccw order
+        HalfEdge b = a.connection;
+        if (b == null)
+            return false;
+        // HalfEdge c = b.prev;
+        HalfEdge d = b.prev.connection; // = c.connection
+        // HalfEdge f = a.next;
+        HalfEdge e = a.next.connection; // = f.connection
+        if (e == null || e.next != d)
+            return false;
+        assert d.center == e.center;
+        return true;
     }
 
     //////////////////////////////////////////////////////////////////////

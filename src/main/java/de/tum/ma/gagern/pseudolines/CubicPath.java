@@ -37,7 +37,7 @@ class CubicPath implements Shape {
     boolean closed;
 
     CubicPath(int maxPoints) {
-        coords = new double[maxPoints*6];
+        coords = new double[maxPoints*6 + (FIRST_POINT - 4)];
         length = FIRST_POINT;
         closed = false;
     }
@@ -45,6 +45,8 @@ class CubicPath implements Shape {
     void addPoint(PointOnLine point) {
         if (length%6 != FIRST_POINT)
             throw new IllegalStateException("Control expected not point");
+        if (length == coords.length)
+            setCapacity(2*length);
         assert !Double.isNaN(point.xPos);
         assert !Double.isNaN(point.yPos);
         assert !Double.isInfinite(point.xPos);
@@ -57,6 +59,8 @@ class CubicPath implements Shape {
     void addControl(HalfEdge he) {
         if (length%6 == FIRST_POINT)
             throw new IllegalStateException("Point expected not control");
+        if (length == coords.length)
+            setCapacity(2*length);
         assert !Double.isNaN(he.xCtrl);
         assert !Double.isNaN(he.yCtrl);
         assert !Double.isInfinite(he.xCtrl);
@@ -64,6 +68,17 @@ class CubicPath implements Shape {
         coords[length] = he.xCtrl;
         coords[length + 1] = he.yCtrl;
         length += 2;
+    }
+
+    void setCapacity(int capacity) {
+        double[] c = new double[capacity];
+        System.arraycopy(coords, 0, c, 0, length);
+        coords = c;
+    }
+
+    void compctify() {
+        if (length != coords.length)
+            setCapacity(length);
     }
 
     void close() {
@@ -80,6 +95,35 @@ class CubicPath implements Shape {
         closed = true;
     }
  
+    void interpolate(double fa, CubicPath a, double fb, CubicPath b) {
+        if (a.length != b.length)
+            throw new IllegalArgumentException("Paths have different length");
+        if (a.closed != b.closed)
+            throw new IllegalArgumentException("Paths differ in closedness");
+        length = a.length;
+        if (coords.length < length)
+            coords = new double[length];
+        for (int i = 0; i < length; ++i)
+            coords[i] = fa*a.coords[i] + fb*b.coords[i];
+        closed = a.closed;
+    }
+
+    double firstX() {
+        return coords[FIRST_POINT];
+    }
+
+    double firstY() {
+        return coords[FIRST_POINT + 1];
+    }
+
+    double lastX() {
+        return coords[length - 2];
+    }
+
+    double lastY() {
+        return coords[length - 2];
+    }
+
     // Implementation of Shape
 
     public boolean contains(double x, double y) {
