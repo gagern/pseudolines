@@ -95,6 +95,7 @@ class LinearSystem {
                 maxErr = Math.max(Math.abs(err), maxErr);
                 x[r] = nv;
             }
+            System.out.printf("Iteration %4d: Error %12.8f%n", iter, maxErr);
             if (maxErr < maxErrThreshold)
                 break;
         }
