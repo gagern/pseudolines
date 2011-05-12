@@ -48,6 +48,16 @@ class FlipAnimation extends Animation {
         oldTriangle = triangle;
     }
 
+    static boolean canFlip(Cell triangle) {
+        if (triangle.size() != 3)
+            return false;
+        for (PointOnLine corner: triangle.corners())
+            if (corner.numLines != 2 ||
+                corner instanceof Intersection == false)
+                return false;
+        return true;
+    }
+
     String getOperationName() {
         return "Flip";
     }
@@ -55,25 +65,8 @@ class FlipAnimation extends Animation {
     void performChange() {
         // We must save the list of edges, as we will modify the
         // structure which would cause a concurrent modification.
+        assert canFlip(oldTriangle);
         HalfEdge[] edges = oldTriangle.edges().toArray(new HalfEdge[3]);
-        for (HalfEdge he: edges) {
-            PointOnLine corner = he.center;
-            if (corner.numLines != 2 ||
-                corner instanceof Intersection == false) {
-                removedTriangles = Collections.emptyList();
-                addedTriangles = Collections.emptyList();
-                commonTriangles =
-                    new ArrayList<AnimationCell>(arr.triangles.size());
-                for (Cell triangle: arr.triangles) {
-                    AnimationCell ac = new AnimationCell(triangle);
-                    ac.before = before.getTriangle(triangle);
-                    assert ac.before != null;
-                    ac.after = ac.before;
-                    commonTriangles.add(ac);
-                }
-                return; // cannot flip that yet, simply ignore it
-            }
-        }
         oldCell = new IntersectionCell(oldTriangle, before);
         removedTriangles = new ArrayList<IntersectionCell>(3);
         arr.triangles.remove(oldTriangle);

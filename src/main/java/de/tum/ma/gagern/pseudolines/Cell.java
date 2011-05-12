@@ -31,11 +31,16 @@ class Cell {
 
     private int size;
 
+    boolean atRim;
+
     Cell(HalfEdge start) {
         HalfEdge repr = start;
         size = 0;
+        atRim = false;
         HalfEdge he = start;
         do {
+            if (he.center instanceof RimPoint)
+                atRim = true;
             he = he.connection.prev;
             while (skip(he))
                 he = he.prev;
@@ -53,10 +58,7 @@ class Cell {
     }
 
     boolean isAtRim() {
-        for (PointOnLine p: this.corners())
-            if (p instanceof RimPoint)
-                return true;
-        return false;
+        return atRim;
     }
 
     public int size() {

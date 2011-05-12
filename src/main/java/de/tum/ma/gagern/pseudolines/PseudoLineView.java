@@ -219,12 +219,19 @@ public class PseudoLineView
     }
 
     void flip(Cell triangle) {
-        startAnimation(new FlipAnimation(triangle));
+        if (FlipAnimation.canFlip(triangle))
+            startAnimation(new FlipAnimation(triangle));
     }
 
     private class Mouser extends MouseInputAdapter {
 
         @Override public void mouseClicked(MouseEvent evnt) {
+            if (animation != null) {
+                // cancel running animation
+                animation = null;
+                repaint();
+                return;
+            }
             Point2D.Double pt = new Point2D.Double(evnt.getX() + .5,
                                                    evnt.getY() + .5);
             toUnitCircle(pt, pt);
