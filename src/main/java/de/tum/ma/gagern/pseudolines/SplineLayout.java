@@ -68,22 +68,26 @@ class SplineLayout extends Layout {
         Iterator<HalfEdge> iter = pl.allHalfEdges().iterator();
         int i = 0;
         while (iter.hasNext()) {
-            HalfEdge he = iter.next();
-            he.xCtrl = x[i] + l[i]*sx[i]/3.;
-            he.yCtrl = y[i] + l[i]*sy[i]/3.;
-            assert !Double.isNaN(he.xCtrl);
-            assert !Double.isNaN(he.yCtrl);
-            assert !Double.isInfinite(he.xCtrl);
-            assert !Double.isInfinite(he.yCtrl);
-            he = iter.next();
+            HalfEdge he1 = iter.next();
+            HalfEdge he2 = iter.next();
+            setControls(i, he1, he2);
             ++i;
-            he.xCtrl = x[i] - l[i-1]*sx[i]/3.;
-            he.yCtrl = y[i] - l[i-1]*sy[i]/3.;
-            assert !Double.isNaN(he.xCtrl);
-            assert !Double.isNaN(he.yCtrl);
-            assert !Double.isInfinite(he.xCtrl);
-            assert !Double.isInfinite(he.yCtrl);
+            assert !Double.isNaN(he1.xCtrl);
+            assert !Double.isNaN(he1.yCtrl);
+            assert !Double.isInfinite(he1.xCtrl);
+            assert !Double.isInfinite(he1.yCtrl);
+            assert !Double.isNaN(he2.xCtrl);
+            assert !Double.isNaN(he2.yCtrl);
+            assert !Double.isInfinite(he2.xCtrl);
+            assert !Double.isInfinite(he2.yCtrl);
         }
+    }
+
+    void setControls(int i, HalfEdge he1, HalfEdge he2) {
+        he1.xCtrl = x[i] + l[i]*sx[i]/3.;
+        he1.yCtrl = y[i] + l[i]*sy[i]/3.;
+        he2.xCtrl = x[i + 1] - l[i]*sx[i + 1]/3.;
+        he2.yCtrl = y[i + 1] - l[i]*sy[i + 1]/3.;
     }
 
     void calcParameters() {
