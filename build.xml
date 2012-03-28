@@ -117,8 +117,8 @@
 
   <target name="ivy.get" depends="ivy.check" unless="ivy.downloaded">
     <mvg:require-online/>
-    <property name="ivy.get.version" value="2.1.0"/>
-    <property name="ivy.get.mirror" value="http://www.apache.org/dist"/>
+    <property name="ivy.get.version" value="2.2.0"/>
+    <property name="ivy.get.mirror" value="http://archive.apache.org/dist"/>
     <property name="ivy.get.dir" value="ant/ivy/${ivy.get.version}"/>
     <property name="ivy.get.file"
               value="apache-ivy-${ivy.get.version}-bin-with-deps.zip"/>
